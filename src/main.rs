@@ -153,8 +153,8 @@ async fn handle_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: 
   target_socket.connect(target_addr).await
     .context("[ERROR] Failed to connect to target addr")?;
 
-  let mut buf_in = [0u8; 1280];
-  let mut buf_out = [0u8; 1280];
+  let mut buf_in = [0u8; 2048];
+  let mut buf_out = [0u8; 2048];
   let idle_timeout = Duration::from_hours(6);
 
   loop {
