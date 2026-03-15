@@ -1,4 +1,4 @@
-# Turn Proxy
+# TURN Proxy
 
 ![GitHub License](https://img.shields.io/github/license/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=gplv3&logoColor=FFFFFF)
 ![GitHub repo size](https://img.shields.io/github/repo-size/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=github&logoColor=FFFFFF)
@@ -36,6 +36,28 @@ graph LR
 ## Развёртка
 На данный момент доступны [`flake.nix`](./flake.nix) для пакетного менеджера Nix вместе с модулем для NixOS, а также
 [`PKGBUILD`](./PKGBUILD) для Arch Linux
+
+### Быстрая установка (Debian/Ubuntu/Fedora/и производные)
+```bash
+curl -sSL https://raw.githubusercontent.com/Urtyom-Alyanov/turn-proxy-server/master/install.sh | bash
+```
+
+### NixOS
+Для наилучшей операционной системы модно, можно и надо использовать модули, а если быть точнее, то модуль который
+содержится во [`flake.nix`](./flake.nix).
+
+В flake.nix
+```nix
+{
+  inputs = {
+    turn-proxy-server.url = "github:Urtyom-Alyanov/turn-proxy-server";
+  };
+  outputs = { turn-proxy-server }: {
+    # импортируйте куда нибудь
+    # модуль turn-proxy-server.nixosModules.default
+  };
+}
+```
 
 ### NixOS
 Для наилучшей операционной системы модно, можно и надо использовать модули, а если быть точнее, то модуль который
