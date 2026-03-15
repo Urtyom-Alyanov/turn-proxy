@@ -60,6 +60,9 @@ cd turn-proxy-server
 makepkg -si
 ```
 
+### Dockerfile
+Также есть [Dockerfile](./Dockerfile), но сам пакет не опубликован на Dockerhub, делайте с ним что хотите.
+
 ## Использование
 По умолчанию программа ищет конфигурацию в `/etc/turn-proxy/server/config.toml`, однако можно задать и иной путь
 с помощью `--config {путь}`.
