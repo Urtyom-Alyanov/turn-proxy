@@ -11,8 +11,10 @@ RestartSec=5
 
 LimitNOFILE=65535
 
-StandardOutput=append:/var/log/turn-proxy.log
-StandardError=inherit
+Environment=RUST_LOG=info
+
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

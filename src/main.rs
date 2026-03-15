@@ -5,6 +5,7 @@ use tokio::net::UdpSocket;
 use std::sync::Arc;
 use std::time::Duration;
 use clap::Parser;
+use tracing::{info, error, warn, debug};
 use rcgen::{CertificateParams, KeyPair, PKCS_ECDSA_P256_SHA256};
 use crate::configuration_file::AppConfig;
 use webrtc_dtls::config::{Config as DtlsConfig, ExtendedMasterSecretType};
@@ -13,6 +14,7 @@ use webrtc_util::Conn;
 use webrtc_util::conn::Listener;
 use tokio_util::sync::CancellationToken;
 use tokio::task::{JoinSet};
+use tracing_subscriber::{fmt,prelude::*,EnvFilter};
 
 pub mod configuration_file;
 
@@ -33,6 +35,16 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+  let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
+
+  let filter = EnvFilter::try_from_default_env()
+    .unwrap_or_else(|_| EnvFilter::new("info"));
+
+  tracing_subscriber::registry()
+    .with(filter)
+    .with(fmt::layer().with_writer(non_blocking))
+    .init();
+
   let args = Args::parse();
 
   let mut config = if !args.no_config {
@@ -59,8 +71,8 @@ async fn main() -> Result<()> {
 
   let dtls_config = dtls_configure().await?;
 
-  println!("[LOG] Listening on: {} UDP", listen_addr);
-  println!("[LOG] Proxying to: {} UDP", proxy_addr);
+  info!("Listening on: {} UDP", listen_addr);
+  info!("Proxying to: {} UDP", proxy_addr);
   let listener = listen(listen_addr, dtls_config).await?;
 
   let cancel_token = CancellationToken::new();
@@ -71,11 +83,11 @@ async fn main() -> Result<()> {
   let ct = cancel_token.clone();
   tokio::spawn(async move {
     tokio::signal::ctrl_c().await.ok();
-    println!("[LOG] Shutdown signal received. Closing connections...");
+    info!("Shutdown signal received. Closing connections...");
     ct.cancel();
   });
 
-  println!("[SUCCESS] Proxy server is up");
+  info!("Proxy server is up");
 
   loop {
     tokio::select! {
@@ -85,7 +97,7 @@ async fn main() -> Result<()> {
           Ok(res) => res,
           Err(e) => {
             if cancel_token.is_cancelled() { break; }
-            eprintln!("[WARN] Accept error: {}", e);
+            warn!("Accept error: {}", e);
             continue;
           }
         };
@@ -94,7 +106,7 @@ async fn main() -> Result<()> {
         let proxy_addr = proxy_addr.clone();
 
         cancel_set.spawn(async move {
-          println!("[LOG] connection from: {}", remote_addr);
+          info!("Connection from: {}", remote_addr);
 
           let conn_for_shutdown = conn.clone();
 
@@ -104,38 +116,38 @@ async fn main() -> Result<()> {
             }
             res = handle_connection(conn, proxy_addr) => {
               if let Err(e) = res {
-                eprintln!("[WARN] error handling connection to {}: {}", remote_addr, e);
+                warn!("Error handling connection to {}: {}", remote_addr, e);
               }
             }
           }
 
-          println!("[LOG] connection closed: {}", remote_addr);
+          info!("Connection closed: {}", remote_addr);
         });
       }
     }
   }
 
-  println!("[LOG] Waiting for all tasks to finish...");
+  info!("Waiting for all tasks to finish...");
   let _ = tokio::time::timeout(Duration::from_secs(3), async {
     while let Some(_) = cancel_set.join_next().await {}
   }).await;
 
-  println!("[LOG] Server stopped.");
+  info!("Server stopped.");
 
   Ok(())
 }
 
 async fn dtls_configure() -> Result<DtlsConfig> {
-  println!("[LOG] Signing certificates...");
+  info!("Signing certificates...");
   let key_pair = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)?;
   let mut params = CertificateParams::default();
   let cert = params.self_signed(&key_pair)?;
 
-  println!("[LOG] DTLS configuring...");
+  info!("DTLS configuring...");
   let dtls_cert = webrtc_dtls::crypto::Certificate {
     certificate: vec![cert.der().to_vec().into()],
     private_key: webrtc_dtls::crypto::CryptoPrivateKey::from_key_pair(
-      &key_pair).map_err(|e| panic!("[LOG] DTLS key parsing error: {}", e)).unwrap(),
+      &key_pair).map_err(|e| error!("DTLS key parsing error: {}", e)).unwrap(),
   };
   let dtls_config = DtlsConfig {
     certificates: vec![dtls_cert],
@@ -148,10 +160,16 @@ async fn dtls_configure() -> Result<DtlsConfig> {
 
 async fn handle_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: SocketAddr) -> Result<()> {
   let target_socket = UdpSocket::bind("0.0.0.0:0").await
-    .context("[ERROR] Failed to bind local UDP socket")?;
+    .context("Failed to bind local UDP socket")?;
 
-  target_socket.connect(target_addr).await
-    .context("[ERROR] Failed to connect to target addr")?;
+  debug!("Local socket {} successfully bound", target_socket.local_addr()?);
+
+  if let Err(e) = target_socket.connect(target_addr).await {
+    error!("Failed to connect to target addr {}: {:?}", target_addr, e);
+    return Err(e).context("Failed to connect to target addr");
+  }
+
+  debug!("Successfully connected to target {} from {}", target_addr, target_socket.local_addr()?);
 
   let mut buf_in = [0u8; 2048];
   let mut buf_out = [0u8; 2048];
@@ -163,22 +181,27 @@ async fn handle_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: 
       res = dtls_conn.recv(&mut buf_in) => {
         match res {
           Ok(bytes) if bytes > 0 => {
+            debug!("Received {} bytes from DTLS connection {}", bytes, target_socket.local_addr()?);
+            if bytes >= buf_in.len() {
+              warn!("Pocket from {} is too large for buffer ({})", target_socket.local_addr()?, bytes);
+            }
             target_socket.send(&buf_in[..bytes]).await?;
           },
           Ok(_) => break,
           Err(e) => {
-            return Err(anyhow::anyhow!("[WARN] DTLS error: {}", e));
+            return Err(anyhow::anyhow!("DTLS error: {}", e));
           }
         }
       }
       // read from UDP (target -> proxy)
       res = target_socket.recv(&mut buf_out) => {
-          let n = res?;
-          dtls_conn.send(&buf_out[..n]).await.context("[ERROR] DTLS write error")?;
+        let n = res?;
+        debug!("Received {} bytes from UDP service connection {}", n, target_addr);
+        dtls_conn.send(&buf_out[..n]).await.context("DTLS write error")?;
       }
 
       _ = tokio::time::sleep(idle_timeout) => {
-          println!("[LOG] Connection idle timeout reached (no activity)");
+          println!(" Connection idle timeout reached (no activity)");
           break;
       }
     }
