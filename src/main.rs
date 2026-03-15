@@ -11,6 +11,8 @@ use webrtc_dtls::config::{Config as DtlsConfig, ExtendedMasterSecretType};
 use webrtc_dtls::listener::listen;
 use webrtc_util::Conn;
 use webrtc_util::conn::Listener;
+use tokio_util::sync::CancellationToken;
+use tokio::task::{AbortHandle, JoinSet};
 
 pub mod configuration_file;
 
@@ -30,7 +32,7 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
   let args = Args::parse();
 
   let mut config = if !args.no_config {
@@ -61,39 +63,64 @@ async fn main() -> anyhow::Result<()> {
   println!("[LOG] Proxying to: {} UDP", proxy_addr);
   let listener = listen(listen_addr, dtls_config).await?;
 
+  let cancel_token = CancellationToken::new();
+  let mut cancel_set = JoinSet::new();
+
   let shutdown_notify = Arc::new(tokio::sync::Notify::new());
   let sn_clone = shutdown_notify.clone();
+  let ct = cancel_token.clone();
   tokio::spawn(async move {
     tokio::signal::ctrl_c().await.ok();
-    println!("Terminating...");
-    sn_clone.notify_waiters();
+    println!("[LOG] Shutdown signal received. Closing connections...");
+    ct.cancel();
   });
 
   println!("[SUCCESS] Proxy server is up");
 
   loop {
     tokio::select! {
-      _ = shutdown_notify.notified() => break,
+      _ = cancel_token.cancelled() => break,
       conn_result = listener.accept() => {
         let (conn, remote_addr) = match conn_result {
           Ok(res) => res,
           Err(e) => {
+            if cancel_token.is_cancelled() { break; }
             eprintln!("[WARN] Accept error: {}", e);
             continue;
           }
         };
 
+        let ct_inner = cancel_token.clone();
         let proxy_addr = proxy_addr.clone();
-        tokio::spawn(async move {
+
+        cancel_set.spawn(async move {
           println!("[LOG] connection from: {}", remote_addr);
-          if let Err(e) = handle_connection(conn, proxy_addr).await {
-            eprintln!("[WARN] error handling connection to {}: {}", remote_addr, e);
+
+          let conn_for_shutdown = conn.clone();
+
+          tokio::select! {
+            _ = ct_inner.cancelled() => {
+              let _ = conn_for_shutdown.close().await;
+            }
+            res = handle_connection(conn, proxy_addr) => {
+              if let Err(e) = res {
+                eprintln!("[WARN] error handling connection to {}: {}", remote_addr, e);
+              }
+            }
           }
+
           println!("[LOG] connection closed: {}", remote_addr);
         });
       }
     }
   }
+
+  println!("[LOG] Waiting for all tasks to finish...");
+  let _ = tokio::time::timeout(Duration::from_secs(3), async {
+    while let Some(_) = cancel_set.join_next().await {}
+  }).await;
+
+  println!("[LOG] Server stopped.");
 
   Ok(())
 }
