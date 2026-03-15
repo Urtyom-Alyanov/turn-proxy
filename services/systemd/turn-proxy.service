@@ -1,0 +1,18 @@
+[Unit]
+Description=DTLS TURN Proxy Server
+After=network.target
+Documentation=https://github.com/Urtyom-Alyanov/turn-proxy-server
+
+[Service]
+ExecStart=/usr/local/bin/turn-proxy-server --config /etc/turn-proxy/server/config.toml
+
+Restart=always
+RestartSec=5
+
+LimitNOFILE=65535
+
+StandardOutput=append:/var/log/turn-proxy.log
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target
