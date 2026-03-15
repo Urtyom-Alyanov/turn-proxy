@@ -1,5 +1,14 @@
 # Turn Proxy
 
+![GitHub License](https://img.shields.io/github/license/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=gplv3&logoColor=FFFFFF)
+![GitHub repo size](https://img.shields.io/github/repo-size/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=github&logoColor=FFFFFF)
+
+[//]: # (![Docker image size]&#40;https://img.shields.io/docker/image-size/ghcr/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=docker&logoColor=FFFFFF&#41;)
+
+![GitHub top language](https://img.shields.io/github/languages/top/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=rust&color=FF8000&logoColor=FFFFFF)
+![GitHub branch status](https://img.shields.io/github/checks-status/Urtyom-Alyanov/turn-proxy-server/main?style=for-the-badge&logo=githubactions&logoColor=FFFFFF)
+![Last Commit](https://img.shields.io/github/last-commit/Urtyom-Alyanov/turn-proxy-server?style=for-the-badge&logo=git&logoColor=FFFFFF)
+
 ## Отказ от ответственности (дисклеймер)
 Данный проект является исследовательским, автор не несёт ответственности за использование его трудов для обхода
 блокировок запрещённых сервисов. Также автор не ручается за нарушение пользовательского соглашения провайдеров сервисов,
