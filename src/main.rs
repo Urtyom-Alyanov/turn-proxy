@@ -183,7 +183,7 @@ async fn handle_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: 
           Ok(bytes) if bytes > 0 => {
             debug!("Received {} bytes from DTLS connection {}", bytes, target_socket.local_addr()?);
             if bytes >= buf_in.len() {
-              warn!("Pocket from {} is too large for buffer ({})", target_socket.local_addr()?, bytes);
+              warn!("Packet from {} is too large for buffer ({})", target_socket.local_addr()?, bytes);
             }
             target_socket.send(&buf_in[..bytes]).await?;
           },
@@ -201,8 +201,8 @@ async fn handle_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: 
       }
 
       _ = tokio::time::sleep(idle_timeout) => {
-          println!(" Connection idle timeout reached (no activity)");
-          break;
+        info!("Connection idle timeout reached (no activity)");
+        break;
       }
     }
   }
