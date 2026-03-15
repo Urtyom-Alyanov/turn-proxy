@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Packaging Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm build-essential
+          cargo install cargo-deb
+          cargo install cargo-generate-rpm
+
+      - name: Build Release
+        run: cargo build --release
+
+      - name: Build Debian Package
+        run: cargo deb
+
+      - name: Build RPM Package
+        run: cargo generate-rpm
+
+      - name: Prepare Artifacts
+        run: |
+          mkdir -p artifacts
+          cp target/release/turn-proxy-server artifacts/
+          cp target/debian/*.deb artifacts/
+          cp target/generate-rpm/*.rpm artifacts/
+          cd target/release
+          tar -czvf ../../artifacts/turn-proxy-server-linux-x64.tar.gz turn-proxy-server
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/*.deb
+            artifacts/*.rpm
+            artifacts/*.tar.gz
+            artifacts/turn-proxy-server
+          generate_release_notes: true
+          draft: false
+          prerelease: false

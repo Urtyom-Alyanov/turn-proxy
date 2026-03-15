@@ -1,7 +1,9 @@
 [package]
 name = "turn-proxy-server"
+description = "DTLS proxy server for TURN relay"
 version = "1.0.0"
 edition = "2024"
+license = "AGPL-3"
 repository = "https://github.com/Urtyom-Alyanov/turn-proxy-server"
 
 [dependencies]
@@ -34,12 +36,16 @@ assets = [
     ["example.toml", "/etc/turn-proxy/server/config.toml", "644"],
 ]
 
-[package.metadata.rpm]
-package = "turn-proxy-server"
-summary = "DTLS proxy server for TURN relay"
-license = "AGPLv3"
+[package.metadata.generate-rpm]
 assets = [
     { source = "target/release/turn-proxy-server", dest = "/usr/local/bin/turn-proxy-server", mode = "755" },
     { source = "services/systemd/turn-proxy.service", dest = "/usr/lib/systemd/system/turn-proxy.service", mode = "644" },
     { source = "example.toml", dest = "/etc/turn-proxy/server/config.toml", mode = "644" }
 ]
+post_install = """
+systemctl daemon-reload
+"""
+pre_uninstall = """
+systemctl stop turn-proxy || true
+systemctl disable turn-proxy || true
+"""
