@@ -71,7 +71,7 @@
               default = "0.0.0.0:56000";
               description = "Address to listening";
             };
-            proxyTo = lib.mkOption {
+            proxyInto = lib.mkOption {
               type = lib.types.str;
               description = "Address of UDP-based application";
             };
@@ -84,7 +84,7 @@
             after = [ "network.target" ];
             wantedBy = [ "multi-user.target" ];
             serviceConfig = {
-              ExecStart = "${cfg.package}/bin/turn-proxy-server ${if cfg.configPath then "--config=${cfg.configPath}" else "--no_config"} --listening_on=${cfg.config.listeningOn} --proxy_to=${cfg.config.proxyTo}";
+              ExecStart = "${cfg.package}/bin/turn-proxy-server ${if cfg.configPath then "--config=${cfg.configPath}" else "--no_config"} --listening_on=${cfg.config.listeningOn} --proxy_into=${cfg.config.proxyInto}";
               Restart = "always";
               LimitNOFILE = 65535;
             };
