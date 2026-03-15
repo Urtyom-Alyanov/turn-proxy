@@ -12,6 +12,54 @@
 Проще говоря, этот проект изучает как работают видеозвонки в компьютерной сети "Интернет", позволяя передавать через них
 не только аудио и видео информацию, но вообще любую, при этом исключая MITM-атаку и анализ с помощью шифрования DTLS
 
+## Развёртка
+На данный момент доступны [`flake.nix`](./flake.nix) для пакетного менеджера Nix вместе с модулем для NixOS, а также
+[`PKGBUILD`](./PKGBUILD) для Arch Linux
+
+### NixOS
+Для наилучшей операционной системы модно, можно и надо использовать модули, а если быть точнее, то модуль который
+содержится во [`flake.nix`](./flake.nix).
+
+В flake.nix
+```nix
+{
+  inputs = {
+    turn-proxy-server.url = "github:Urtyom-Alyanov/turn-proxy-server";
+  };
+  outputs = { turn-proxy-server }: {
+    # импортируйте куда нибудь
+    # модуль turn-proxy-server.nixosModules.default
+  };
+}
+```
+В самой конфигурации:
+```nix
+{
+  services.turn-proxy = {
+    enable = true; # Включаем шарманку
+    config = {
+      listeningOn = "0.0.0.0:56000"; # Адрес, который слушает программа, то есть куда будет обращаться TURN сервер с зашифрованным (с помощью DTLS) трафиком (адресант)
+      proxyInto = "127.0.0.1:51820"; # Адрес, куда будет высылаться расшифрованный UDP-трафик (адресат)
+    };
+    configFile = ./config.toml; # Также никто не мешает указать просто файл с конфигурацией
+    # Также есть ещё аргумент package, чтобы задать кастомный бинарник
+  };
+}
+```
+
+### Для Arch Linux (PKGBUILD)
+```shell
+# Когда опубликуется на AUR
+#git clone [https://aur.archlinux.org/turn-proxy-server-rs.git](https://aur.archlinux.org/turn-proxy-server-rs.git)
+#cd turn-proxy-server-rs
+#makepkg -si
+
+# Поэтому пока так
+git clone [https://github.com/Urtyom-Alyanov/turn-proxy-server.git](https://aur.archlinux.org/turn-proxy-server.git)
+cd turn-proxy-server
+makepkg -si
+```
+
 ## Использование
 По умолчанию программа ищет конфигурацию в `/etc/turn-proxy/server/config.toml`, однако можно задать и иной путь
 с помощью `--config {путь}`.
