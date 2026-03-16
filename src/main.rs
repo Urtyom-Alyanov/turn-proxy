@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
 
   let args = Args::parse();
 
-  let mut config = if !args.no_config {
+  let config = if !args.no_config {
     let content = fs::read_to_string(&args.config)
       .with_context(|| format!("[ERROR] read configuration file error: {}", args.config))?;
     toml::from_str::<AppConfig>(&content)
@@ -78,8 +78,6 @@ async fn main() -> Result<()> {
   let cancel_token = CancellationToken::new();
   let mut cancel_set = JoinSet::new();
 
-  let shutdown_notify = Arc::new(tokio::sync::Notify::new());
-  let sn_clone = shutdown_notify.clone();
   let ct = cancel_token.clone();
   tokio::spawn(async move {
     tokio::signal::ctrl_c().await.ok();
@@ -140,7 +138,7 @@ async fn main() -> Result<()> {
 async fn dtls_configure() -> Result<DtlsConfig> {
   info!("Signing certificates...");
   let key_pair = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)?;
-  let mut params = CertificateParams::default();
+  let params = CertificateParams::default();
   let cert = params.self_signed(&key_pair)?;
 
   info!("DTLS configuring...");
