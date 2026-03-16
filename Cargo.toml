@@ -29,7 +29,7 @@ lto = "thin"
 
 [package.metadata.deb]
 maintainer = "Urtyom Alyanov <urtyomalyanov@gmail.com>"
-maintainer-scripts = "dist/deb"
+maintainer-scripts = "dist-specific/deb"
 copyright = "2026, Urtyom Alyanov"
 license-file = ["LICENSE", "4"]
 extended-description = """
