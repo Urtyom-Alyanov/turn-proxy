@@ -12,7 +12,7 @@ use anyhow::{Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  init_logging();
+  let _guard = init_logging();
   let config = init_config()?;
   let dtls_config = dtls_configure()?;
 
