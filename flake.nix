@@ -79,7 +79,7 @@
         };
 
         config = lib.mkIf cfg.enable {
-          systemd.services.turn-proxy = {
+          systemd.services.turn-proxy-server = {
             description = "DTLS TURN Proxy Server";
             after = [ "network.target" ];
             wantedBy = [ "multi-user.target" ];

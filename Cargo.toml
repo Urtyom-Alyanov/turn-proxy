@@ -5,6 +5,8 @@ version = "1.0.3"
 edition = "2024"
 license = "AGPL-3"
 repository = "https://github.com/Urtyom-Alyanov/turn-proxy-server"
+license-file = "LICENSE"
+authors = ["Urtyom Alyanov"]
 
 [dependencies]
 rcgen = "0.13.2"
@@ -27,6 +29,7 @@ lto = "thin"
 
 [package.metadata.deb]
 maintainer = "Urtyom Alyanov <urtyomalyanov@gmail.com>"
+maintainer-scripts = "dist/deb"
 copyright = "2026, Urtyom Alyanov"
 license-file = ["LICENSE", "4"]
 extended-description = """
@@ -35,20 +38,20 @@ to bypass restrictive networks or analyze video call traffic.
 """
 assets = [
     ["target/release/turn-proxy-server", "/usr/local/bin/turn-proxy-server", "755"],
-    ["services/systemd/turn-proxy.service", "/lib/systemd/system/turn-proxy.service", "644"],
+    ["services/systemd/turn-proxy-server.service", "/lib/systemd/system/turn-proxy-server.service", "644"],
     ["example.toml", "/etc/turn-proxy/server/config.toml", "644"],
 ]
 
 [package.metadata.generate-rpm]
 assets = [
     { source = "target/release/turn-proxy-server", dest = "/usr/local/bin/turn-proxy-server", mode = "755" },
-    { source = "services/systemd/turn-proxy.service", dest = "/usr/lib/systemd/system/turn-proxy.service", mode = "644" },
+    { source = "services/systemd/turn-proxy-server.service", dest = "/usr/lib/systemd/system/turn-proxy-server.service", mode = "644" },
     { source = "example.toml", dest = "/etc/turn-proxy/server/config.toml", mode = "644" }
 ]
 post_install = """
 systemctl daemon-reload
 """
 pre_uninstall = """
-systemctl stop turn-proxy || true
-systemctl disable turn-proxy || true
+systemctl stop turn-proxy-server || true
+systemctl disable turn-proxy-server || true
 """
