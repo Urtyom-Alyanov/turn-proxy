@@ -84,7 +84,7 @@
             after = [ "network.target" ];
             wantedBy = [ "multi-user.target" ];
             serviceConfig = {
-              ExecStart = "${cfg.package}/bin/turn-proxy-server ${if cfg.configPath then "--config=${cfg.configPath}" else "--no_config"} --listening_on=${cfg.config.listeningOn} --proxy_into=${cfg.config.proxyInto}";
+              ExecStart = "${cfg.package}/bin/turn-proxy-server ${if cfg.configPath then "--config=${cfg.configPath}" else "--no-config"} --listening-on=${cfg.config.listeningOn} --proxy-into=${cfg.config.proxyInto}";
               Restart = "always";
               LimitNOFILE = 65535;
             };

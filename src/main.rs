@@ -171,40 +171,75 @@ async fn handle_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: 
 
   debug!("Successfully connected to target {} from {}", target_addr, target_socket.local_addr()?);
 
-  let mut buf_in = [0u8; 2048];
-  let mut buf_out = [0u8; 2048];
+  let socket_arc = Arc::new(target_socket);
+
+  let from_dtls = Arc::clone(&dtls_conn);
+  let to_dtls = Arc::clone(&dtls_conn);
+  let from_socket = Arc::clone(&socket_arc);
+  let to_socket = Arc::clone(&socket_arc);
+
   let idle_timeout = Duration::from_hours(6);
 
-  loop {
-    tokio::select! {
-      // read from DTLS (client -> proxy)
-      res = dtls_conn.recv(&mut buf_in) => {
-        match res {
-          Ok(bytes) if bytes > 0 => {
-            debug!("Received {} bytes from DTLS connection {}", bytes, target_socket.local_addr()?);
-            if bytes >= buf_in.len() {
-              warn!("Packet from {} is too large for buffer ({})", target_socket.local_addr()?, bytes);
-            }
-            target_socket.send(&buf_in[..bytes]).await?;
-          },
-          Ok(_) => break,
-          Err(e) => {
-            return Err(anyhow::anyhow!("DTLS error: {}", e));
-          }
-        }
-      }
-      // read from UDP (target -> proxy)
-      res = target_socket.recv(&mut buf_out) => {
-        let n = res?;
-        debug!("Received {} bytes from UDP service connection {}", n, target_addr);
-        dtls_conn.send(&buf_out[..n]).await.context("DTLS write error")?;
-      }
+  let token = tokio_util::sync::CancellationToken::new();
+  let t1 = token.clone();
+  let t2 = token.clone();
 
-      _ = tokio::time::sleep(idle_timeout) => {
-        info!("Connection idle timeout reached (no activity)");
-        break;
+  // client -> proxy -> target
+  let client_to_proxy: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
+    let mut buf = [0u8; 2048];
+    loop {
+      match from_dtls.recv(&mut buf).await {
+        Ok(n) if n > 0 => {
+          debug!("Received {} bytes from {}", n, from_dtls.local_addr()?);
+          if n >= buf.len() {
+            warn!("Packet from {} is too large for buffer ({})", from_dtls.local_addr().unwrap(), n);
+          }
+          if let Err(e) = to_socket.send(&buf[..n]).await {
+            warn!("Error sending to UDP {} from {}: {}", to_socket.local_addr().unwrap(), from_dtls.local_addr().unwrap(), e);
+            break;
+          }
+          info!("Send {} bytes into {}", n, to_socket.local_addr()?);
+        }
+        _ => break,
       }
     }
+
+    t1.cancel();
+    Ok(())
+  });
+
+  // client <- proxy <- target
+  let target_to_proxy: tokio::task::JoinHandle<Result<()>> = tokio::spawn(async move {
+    let mut buf = [0u8; 2048];
+
+    loop {
+      match from_socket.recv(&mut buf).await {
+        Ok(n) if n > 0 => {
+          debug!("Received {} bytes from {}", n, from_socket.local_addr()?);
+          if let Err(e) = to_dtls.send(&buf[..n]).await {
+            debug!("Error sending to DTLS: {}", e);
+            break;
+          }
+          info!("Send {} bytes into {}", n, to_dtls.local_addr()?);
+        }
+        _ => break,
+      }
+    }
+
+    t2.cancel();
+    Ok(())
+  });
+
+  let result = tokio::time::timeout(idle_timeout, async {
+    tokio::select! {
+      _ = client_to_proxy => { debug!("Client task finished"); },
+      _ = target_to_proxy => { debug!("Target task finished"); },
+    }
+  }).await;
+
+  if result.is_err() {
+    info!("Connection timed out due to inactivity");
+    token.cancel();
   }
 
   let _ = dtls_conn.close().await;
