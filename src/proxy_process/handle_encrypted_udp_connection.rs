@@ -1,24 +1,27 @@
-use anyhow::{Result,Context};
+use crate::proxy_process::proxy_flow::proxy_flow;
+
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::task::JoinHandle;
+use anyhow::{Result,Context};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use webrtc_util::Conn;
 
-pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, target_addr: SocketAddr) -> Result<()> {
+pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, proxy_addr: SocketAddr) -> Result<()> {
   let target_socket = UdpSocket::bind("0.0.0.0:0").await
     .context("Failed to bind local UDP socket")?;
 
   debug!("Local socket {} successfully bound", target_socket.local_addr()?);
 
-  if let Err(e) = target_socket.connect(target_addr).await {
-    error!("Failed to connect to target addr {}: {:?}", target_addr, e);
+  if let Err(e) = target_socket.connect(proxy_addr).await {
+    error!("Failed to connect to target addr {}: {:?}", proxy_addr, e);
     return Err(e).context("Failed to connect to target addr");
   }
 
-  debug!("Successfully connected to target {} from {}", target_addr, target_socket.local_addr()?);
+  debug!("Successfully connected to target {} from {}", target_socket.peer_addr()?, target_socket.local_addr()?);
 
   let socket_arc = Arc::new(target_socket);
 
@@ -29,55 +32,26 @@ pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sy
 
   let idle_timeout = Duration::from_hours(6);
 
-  let token = tokio_util::sync::CancellationToken::new();
+  let token = CancellationToken::new();
   let t1 = token.clone();
   let t2 = token.clone();
 
-  // client -> proxy -> target
-  let client_to_proxy: JoinHandle<Result<()>> = tokio::spawn(async move {
-    let mut buf = [0u8; 2048];
-    loop {
-      match from_dtls.recv(&mut buf).await {
-        Ok(n) if n > 0 => {
-          debug!("Received {} bytes from {}", n, from_dtls.local_addr()?);
-          if n >= buf.len() {
-            warn!("Packet from {} is too large for buffer ({})", from_dtls.local_addr().unwrap(), n);
-          }
-          if let Err(e) = to_socket.send(&buf[..n]).await {
-            warn!("Error sending to UDP {} from {}: {}", to_socket.local_addr().unwrap(), from_dtls.local_addr().unwrap(), e);
-            break;
-          }
-          info!("Send {} bytes into {}", n, to_socket.local_addr()?);
-        }
-        _ => break,
-      }
-    }
-
-    t1.cancel();
-    Ok(())
-  });
-
-  // client <- proxy <- target
-  let target_to_proxy: JoinHandle<Result<()>> = tokio::spawn(async move {
-    let mut buf = [0u8; 2048];
-
-    loop {
-      match from_socket.recv(&mut buf).await {
-        Ok(n) if n > 0 => {
-          debug!("Received {} bytes from {}", n, from_socket.local_addr()?);
-          if let Err(e) = to_dtls.send(&buf[..n]).await {
-            debug!("Error sending to DTLS: {}", e);
-            break;
-          }
-          info!("Send {} bytes into {}", n, to_dtls.local_addr()?);
-        }
-        _ => break,
-      }
-    }
-
-    t2.cancel();
-    Ok(())
-  });
+  let client_to_proxy = proxy_flow(
+    "FROM_CLIENT".to_owned(),
+    to_socket.peer_addr()?,
+    to_socket.local_addr()?,
+    t1,
+    from_dtls,
+    to_socket
+  );
+  let target_to_proxy = proxy_flow(
+    "FROM_TARGET".to_owned(),
+    from_socket.local_addr()?,
+    from_socket.peer_addr()?,
+    t2,
+    from_socket,
+    to_dtls
+  );
 
   let result = tokio::time::timeout(idle_timeout, async {
     tokio::select! {
