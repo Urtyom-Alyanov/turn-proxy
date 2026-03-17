@@ -11,9 +11,9 @@ pub fn init_config() -> Result<AppConfig> {
 
   let config = if !args.no_config {
     let content = fs::read_to_string(&args.config)
-      .with_context(|| format!("[ERROR] read configuration file error: {}", args.config))?;
+      .context(format!("read configuration file error: {}", args.config))?;
     toml::from_str::<AppConfig>(&content)
-      .context(format!("[ERROR] TOML configuration parse error (path: {})", args.config))?
+      .context(format!("TOML configuration parse error (path: {})", args.config))?
   } else {
     AppConfig::default()
   };
@@ -24,7 +24,7 @@ pub fn init_config() -> Result<AppConfig> {
 
   let final_proxy = args.proxy_into
     .or(config.common.proxy_into)
-    .context("[ERROR] proxy_into address is missing")?;
+    .context("proxy_into address is missing")?;
 
   Ok(AppConfig {
     common: CommonConfig {
