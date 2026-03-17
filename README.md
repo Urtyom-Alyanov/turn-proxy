@@ -42,6 +42,14 @@ graph LR
 curl -sSL https://raw.githubusercontent.com/Urtyom-Alyanov/turn-proxy-server/master/install.sh | bash
 ```
 
+#### Минимальные требования
+- Ubuntu 21.10 (или 22.04 LTS)
+- Debian 12 (Bookworm)
+- Fedora 35
+- RHEL / CentOS 9
+
+Проще говоря, нужна минимальная версия glibc: `2.27`
+
 ### NixOS
 Для наилучшей операционной системы модно, можно и надо использовать модули, а если быть точнее, то модуль который
 содержится во [`flake.nix`](./flake.nix).
