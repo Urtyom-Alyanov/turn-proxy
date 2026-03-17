@@ -15,11 +15,11 @@ tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 tracing-appender = "0.2.4"
 tokio = { version = "1.50.0", features = ["full"] }
 toml = "1.0.6"
-webrtc-dtls = { version = "0.12.0" }
+dtls = { version = "0.17.1" }
 serde = { version = "1.0.228", features = ["derive"] }
 clap = { version = "4.6.0", features = ["derive"] }
 anyhow = "1.0.102"
-webrtc-util = { version = "0.11.0", features = ["conn"] }
+webrtc-util = { version = "0.17.1", features = ["conn"] }
 tokio-util = "0.7.18"
 
 # The profile that 'dist' will build with

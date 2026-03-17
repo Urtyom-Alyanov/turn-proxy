@@ -7,8 +7,8 @@ use std::time::Duration;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
-use webrtc_dtls::listener::listen;
-use webrtc_dtls::config::{Config as DtlsConfig};
+use dtls::listener::listen;
+use dtls::config::{Config as DtlsConfig};
 use webrtc_util::conn::Listener;
 
 pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()> {

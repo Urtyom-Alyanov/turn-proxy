@@ -4,10 +4,9 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::UdpSocket;
-use tokio::task::JoinHandle;
 use anyhow::{Result,Context};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 use webrtc_util::Conn;
 
 pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, proxy_addr: SocketAddr) -> Result<()> {

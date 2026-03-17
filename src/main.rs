@@ -1,11 +1,11 @@
 pub mod logging;
 pub mod config;
 pub mod proxy_process;
-pub mod dtls;
+pub mod dtls_process;
 
 use crate::logging::init_logging;
 use crate::config::init_configuration::init_config;
-use crate::dtls::dtls_configure;
+use crate::dtls_process::dtls_configure;
 use crate::proxy_process::listening::listening;
 
 use anyhow::{Result};
