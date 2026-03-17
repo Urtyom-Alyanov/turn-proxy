@@ -21,7 +21,7 @@
 
         turn-proxy-pkg = pkgs.rustPlatform.buildRustPackage {
           pname = "turn-proxy-server";
-          version = "0.1.0";
+          version = "1.0.5";
           src = ./.;
 
           cargoLock = {
@@ -53,7 +53,7 @@
          cfg = config.services.turn-proxy;
        in
        {
-        options.services.turn-proxy = {
+        options.services.turn-proxy-server = {
           enable = lib.mkEnableOption "DTLS Turn Proxy Server";
           package = lib.mkOption {
             type = lib.types.package;
