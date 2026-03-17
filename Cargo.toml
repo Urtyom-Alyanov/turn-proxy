@@ -1,7 +1,7 @@
 [package]
 name = "turn-proxy-server"
 description = "DTLS proxy server for TURN relay"
-version = "1.0.5"
+version = "1.0.6"
 edition = "2024"
 license = "AGPL-3"
 repository = "https://github.com/Urtyom-Alyanov/turn-proxy-server"
