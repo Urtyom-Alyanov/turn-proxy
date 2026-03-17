@@ -15,7 +15,7 @@ echo "Найдена версия: $VERSION"
 # Определяем менеджер пакетов
 if [ -f /etc/debian_version ]; then
     PKG_EXT="deb"
-    INSTALL_CMD="sudo dpkg -i"
+    INSTALL_CMD="sudo apt install"
     echo "Определен дистрибутив: Debian/Ubuntu"
 elif [ -f /etc/redhat-release ] || [ -f /etc/fedora-release ]; then
     PKG_EXT="rpm"
