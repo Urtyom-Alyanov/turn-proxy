@@ -21,9 +21,9 @@ pub fn dtls_configure() -> anyhow::Result<DtlsConfig> {
   };
   let dtls_config = DtlsConfig {
     certificates: vec![dtls_cert],
-    extended_master_secret: ExtendedMasterSecretType::Require,
+    extended_master_secret: ExtendedMasterSecretType::Request,
     server_name: "localhost".to_string(),
-    mtu: 1380,
+    mtu: 1200,
     ..Default::default()
   };
 
