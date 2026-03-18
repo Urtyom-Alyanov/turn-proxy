@@ -135,7 +135,7 @@ turn-proxy-server --no-config --listening-on=0.0.0.0:56000 --proxy-into=127.0.0.
 ### Сервисы
 Однако рекомендуется запускать его с помощью сервиса, для systemd сервис называется `turn-proxy-server.service`,
 манипуляции с ним такие же, как и с другими сервисами, учтите, что последние 2 команды не применимы к NixOS из-за её
-прировды
+природы
 ```shell
 systemctl start turn-proxy-server.service # Чтобы его запустить
 systemctl stop turn-proxy-server.service # Чтобы его остановить
