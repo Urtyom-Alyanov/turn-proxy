@@ -17,7 +17,7 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
   let proxy_addr: SocketAddr = config.common.proxy_into.unwrap().parse()
     .context("'proxy-into' is not a valid socket address")?;
 
-  info!("Listening on: {} UDP", listen_addr);
+  info!("Listening on: {} DTLS UDP", listen_addr);
   info!("Proxying to: {} UDP", proxy_addr);
   let listener = listen(listen_addr, dtls_config).await?;
 
