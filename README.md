@@ -67,23 +67,6 @@ curl -sSL https://raw.githubusercontent.com/Urtyom-Alyanov/turn-proxy-server/mas
 }
 ```
 
-### NixOS
-Для наилучшей операционной системы модно, можно и надо использовать модули, а если быть точнее, то модуль который
-содержится во [`flake.nix`](./flake.nix).
-
-В flake.nix
-```nix
-{
-  inputs = {
-    turn-proxy-server.url = "github:Urtyom-Alyanov/turn-proxy-server";
-  };
-  outputs = { turn-proxy-server }: {
-    # импортируйте куда нибудь
-    # модуль turn-proxy-server.nixosModules.default
-  };
-}
-```
-
 ### Для Arch Linux (PKGBUILD)
 ```shell
 # Когда опубликуется на AUR
