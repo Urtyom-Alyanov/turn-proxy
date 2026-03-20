@@ -36,18 +36,18 @@ pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sy
   let t2 = token.clone();
 
   let client_to_proxy = proxy_flow(
-    "FROM_CLIENT".to_owned(),
+    "UPSTREAM".to_owned(),
+    t1,
     to_socket.peer_addr()?,
     to_socket.local_addr()?,
-    t1,
     from_dtls,
     to_socket
   );
   let target_to_proxy = proxy_flow(
-    "FROM_TARGET".to_owned(),
+    "DOWNSTREAM".to_owned(),
+    t2,
     from_socket.local_addr()?,
     from_socket.peer_addr()?,
-    t2,
     from_socket,
     to_dtls
   );

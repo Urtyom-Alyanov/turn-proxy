@@ -1,7 +1,7 @@
+use dtls::config::{Config as DtlsConfig, ExtendedMasterSecretType};
+use dtls::crypto::{Certificate, CryptoPrivateKey};
 use rcgen::{CertificateParams, KeyPair, PKCS_ECDSA_P256_SHA256};
 use tracing::{error, info};
-use dtls::config::{Config as DtlsConfig, ExtendedMasterSecretType};
-use dtls::crypto::{CryptoPrivateKey,Certificate};
 
 pub fn dtls_configure() -> anyhow::Result<DtlsConfig> {
   // TODO: Реализовать чтение уже готовых сертификатов, что обеспечит более безопасное подключение,
@@ -16,8 +16,9 @@ pub fn dtls_configure() -> anyhow::Result<DtlsConfig> {
   info!("DTLS configuring...");
   let dtls_cert = Certificate {
     certificate: vec![cert.der().to_vec().into()],
-    private_key: CryptoPrivateKey::from_key_pair(
-      &key_pair).map_err(|e| error!("DTLS key parsing error: {}", e)).unwrap(),
+    private_key: CryptoPrivateKey::from_key_pair(&key_pair)
+      .map_err(|e| error!("DTLS key parsing error: {}", e))
+      .unwrap(),
   };
   let dtls_config = DtlsConfig {
     certificates: vec![dtls_cert],
