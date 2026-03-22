@@ -1,4 +1,4 @@
-use crate::proxy_process::proxy_flow::proxy_flow;
+use crate::proxy_process::proxy_flow::{proxy_flow, ProxyBridge};
 
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -24,38 +24,24 @@ pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sy
 
   let socket_arc = Arc::new(target_socket);
 
-  let from_dtls = Arc::clone(&dtls_conn);
-  let to_dtls = Arc::clone(&dtls_conn);
-  let from_socket = Arc::clone(&socket_arc);
-  let to_socket = Arc::clone(&socket_arc);
-
   let idle_timeout = Duration::from_hours(6);
 
   let token = CancellationToken::new();
-  let t1 = token.clone();
-  let t2 = token.clone();
 
-  let client_to_proxy = proxy_flow(
-    "UPSTREAM".to_owned(),
-    t1,
-    to_socket.peer_addr()?,
-    to_socket.local_addr()?,
-    from_dtls,
-    to_socket
+  let proxy_bridge = ProxyBridge::new(
+    String::new(),
+    token.clone(),
+    dtls_conn.clone(),
+    socket_arc,
+    None
   );
-  let target_to_proxy = proxy_flow(
-    "DOWNSTREAM".to_owned(),
-    t2,
-    from_socket.local_addr()?,
-    from_socket.peer_addr()?,
-    from_socket,
-    to_dtls
-  );
+
+  let (upstream, downstream) = proxy_bridge.spawn()?;
 
   let result = tokio::time::timeout(idle_timeout, async {
     tokio::select! {
-      _ = client_to_proxy => { debug!("Client task finished"); },
-      _ = target_to_proxy => { debug!("Target task finished"); },
+      _ = upstream => { debug!("Client task finished"); },
+      _ = downstream => { debug!("Target task finished"); },
     }
   }).await;
 
