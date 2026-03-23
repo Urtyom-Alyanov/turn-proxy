@@ -1,0 +1,14 @@
+[common]
+listening_on = "127.0.0.1:51821"
+peer_addr = "127.0.0.1:56040"
+
+[[providers]]
+priority = 1
+using_udp = true
+using_dtls_obfuscation = true
+threads = 16
+
+[providers.details]
+provider = "default"
+kind = "vk_calls"
+link = "https://vk.com/call/join/..."

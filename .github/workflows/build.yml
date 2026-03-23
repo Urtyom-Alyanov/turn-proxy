@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
@@ -26,13 +26,13 @@ jobs:
           cargo install cargo-generate-rpm
 
       - name: Build Release
-        run: cargo build --release
+        run: cargo build --release -p turn-proxy-server
 
       - name: Build Debian Package
-        run: cargo deb
+        run: cargo deb -p turn-proxy-server
 
       - name: Build RPM Package
-        run: cargo generate-rpm
+        run: cargo generate-rpm -p server
 
       - name: Prepare Artifacts
         run: |

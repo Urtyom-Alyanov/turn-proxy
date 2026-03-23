@@ -1,14 +1,15 @@
-[package]
-name = "turn-proxy-server"
-description = "DTLS proxy server for TURN relay"
+[workspace]
+members = ["server", "client"]
+resolver = "2"
+
+[workspace.package]
 version = "1.0.9"
 edition = "2024"
 license = "AGPL-3"
 repository = "https://github.com/Urtyom-Alyanov/turn-proxy-server"
-license-file = "LICENSE"
 authors = ["Urtyom Alyanov"]
 
-[dependencies]
+[workspace.dependencies]
 rcgen = "0.13.2"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
@@ -22,36 +23,6 @@ anyhow = "1.0.102"
 webrtc-util = { version = "0.17.1", features = ["conn"] }
 tokio-util = "0.7.18"
 
-# The profile that 'dist' will build with
 [profile.dist]
 inherits = "release"
 lto = "thin"
-
-[package.metadata.deb]
-maintainer = "Urtyom Alyanov <urtyomalyanov@gmail.com>"
-maintainer-scripts = "dist-specific/deb"
-copyright = "2026, Urtyom Alyanov"
-license-file = ["LICENSE", "4"]
-extended-description = """
-DTLS proxy server designed to relay UDP traffic through TURN servers
-to bypass restrictive networks or analyze video call traffic.
-"""
-assets = [
-    ["target/release/turn-proxy-server", "/usr/local/bin/turn-proxy-server", "755"],
-    ["services/systemd/turn-proxy-server.service", "/lib/systemd/system/turn-proxy-server.service", "644"],
-    ["example.toml", "/etc/turn-proxy/server/config.toml", "644"],
-]
-
-[package.metadata.generate-rpm]
-assets = [
-    { source = "target/release/turn-proxy-server", dest = "/usr/local/bin/turn-proxy-server", mode = "755" },
-    { source = "services/systemd/turn-proxy-server.service", dest = "/usr/lib/systemd/system/turn-proxy-server.service", mode = "644" },
-    { source = "example.toml", dest = "/etc/turn-proxy/server/config.toml", mode = "644" }
-]
-post_install = """
-systemctl daemon-reload
-"""
-pre_uninstall = """
-systemctl stop turn-proxy-server || true
-systemctl disable turn-proxy-server || true
-"""

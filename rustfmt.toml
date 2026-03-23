@@ -1,3 +1,13 @@
+unstable_features = true
 newline_style = "Unix"
 tab_spaces = 2
 indent_style = "Block"
+imports_granularity = "Crate"
+group_imports = "StdExternalCrate"
+chain_width = 60
+brace_style = "AlwaysNextLine"
+wrap_comments = true
+normalize_comments = true
+max_width = 100
+imports_indent = "Block"
+# merge_imports = true
