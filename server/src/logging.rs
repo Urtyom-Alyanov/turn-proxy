@@ -1,13 +1,11 @@
 use tracing_appender::non_blocking::WorkerGuard;
-use tracing_subscriber::{fmt, EnvFilter};
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
-pub fn init_logging() -> WorkerGuard {
+pub fn init_logging() -> WorkerGuard
+{
   let (non_blocking, guard) = tracing_appender::non_blocking(std::io::stdout());
 
-  let filter = EnvFilter::try_from_default_env()
-    .unwrap_or_else(|_| EnvFilter::new("info"));
+  let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
   tracing_subscriber::registry()
     .with(filter)

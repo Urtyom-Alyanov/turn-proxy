@@ -1,12 +1,16 @@
-use dtls::config::{Config as DtlsConfig, ExtendedMasterSecretType};
-use dtls::crypto::{Certificate, CryptoPrivateKey};
+use dtls::{
+  config::{Config as DtlsConfig, ExtendedMasterSecretType},
+  crypto::{Certificate, CryptoPrivateKey},
+};
 use rcgen::{CertificateParams, KeyPair, PKCS_ECDSA_P256_SHA256};
 use tracing::{error, info};
 
-pub fn dtls_configure() -> anyhow::Result<DtlsConfig> {
-  // TODO: Реализовать чтение уже готовых сертификатов, что обеспечит более безопасное подключение,
-  //       отпечаток (или что-то типа того) которого можно указать в клиенте, если сертификата нет,
-  //       то будем генерировать как сейчас.
+pub fn dtls_configure() -> anyhow::Result<DtlsConfig>
+{
+  // TODO: Реализовать чтение уже готовых сертификатов, что обеспечит более
+  // безопасное подключение,       отпечаток (или что-то типа того) которого
+  // можно указать в клиенте, если сертификата нет,       то будем генерировать
+  // как сейчас.
 
   info!("Signing certificates...");
   let key_pair = KeyPair::generate_for(&PKCS_ECDSA_P256_SHA256)?;

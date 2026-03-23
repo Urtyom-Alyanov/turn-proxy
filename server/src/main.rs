@@ -1,17 +1,18 @@
-pub mod logging;
 pub mod config;
-pub mod proxy_process;
 pub mod dtls_process;
+pub mod logging;
+pub mod proxy_process;
 
-use crate::logging::init_logging;
-use crate::config::init_configuration::init_config;
-use crate::dtls_process::dtls_configure;
-use crate::proxy_process::listening::listening;
+use anyhow::Result;
 
-use anyhow::{Result};
+use crate::{
+  config::init_configuration::init_config, dtls_process::dtls_configure, logging::init_logging,
+  proxy_process::listening::listening,
+};
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<()>
+{
   let _guard = init_logging();
   let config = init_config()?;
   let dtls_config = dtls_configure()?;

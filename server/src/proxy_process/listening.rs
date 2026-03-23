@@ -1,20 +1,30 @@
-use crate::config::configuration::AppConfig;
-use crate::proxy_process::handle_encrypted_udp_connection::handle_encrypted_udp_connection;
+use std::{net::SocketAddr, time::Duration};
 
 use anyhow::{Context, Result};
-use std::net::SocketAddr;
-use std::time::Duration;
+use dtls::{config::Config as DtlsConfig, listener::listen};
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
-use dtls::listener::listen;
-use dtls::config::{Config as DtlsConfig};
 use webrtc_util::conn::Listener;
 
-pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()> {
-  let listen_addr: SocketAddr = config.common.listening_on.unwrap().parse()
+use crate::{
+  config::configuration::AppConfig,
+  proxy_process::handle_encrypted_udp_connection::handle_encrypted_udp_connection,
+};
+
+pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
+{
+  let listen_addr: SocketAddr = config
+    .common
+    .listening_on
+    .unwrap()
+    .parse()
     .context("'listening-on' is not a valid socket address")?;
-  let proxy_addr: SocketAddr = config.common.proxy_into.unwrap().parse()
+  let proxy_addr: SocketAddr = config
+    .common
+    .proxy_into
+    .unwrap()
+    .parse()
     .context("'proxy-into' is not a valid socket address")?;
 
   info!("Listening on: {} DTLS UDP", listen_addr);
@@ -74,7 +84,8 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
   info!("Waiting for all tasks to finish...");
   let _ = tokio::time::timeout(Duration::from_secs(3), async {
     while let Some(_) = cancel_set.join_next().await {}
-  }).await;
+  })
+  .await;
 
   info!("Server stopped.");
 

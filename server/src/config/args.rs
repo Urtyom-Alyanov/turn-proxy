@@ -7,7 +7,8 @@ const DEFAULT_CONFIG_PATH: &str = ".\\config.toml";
 const DEFAULT_CONFIG_PATH: &str = "/etc/turn-proxy/client/config.toml";
 
 #[derive(Parser, Debug)]
-pub struct Args {
+pub struct Args
+{
   #[arg(long, short)]
   pub listening_on: Option<String>,
 

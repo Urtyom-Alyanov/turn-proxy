@@ -1,26 +1,37 @@
-use crate::proxy_process::proxy_flow::{proxy_flow, ProxyBridge};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use std::net::SocketAddr;
-use std::sync::Arc;
-use std::time::Duration;
+use anyhow::{Context, Result};
 use tokio::net::UdpSocket;
-use anyhow::{Result,Context};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
 use webrtc_util::Conn;
 
-pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sync>, proxy_addr: SocketAddr) -> Result<()> {
-  let target_socket = UdpSocket::bind("0.0.0.0:0").await
+use crate::proxy_process::proxy_flow::{ProxyBridge, proxy_flow};
+
+pub async fn handle_encrypted_udp_connection(
+  dtls_conn: Arc<dyn Conn + Send + Sync>,
+  proxy_addr: SocketAddr,
+) -> Result<()>
+{
+  let target_socket = UdpSocket::bind("0.0.0.0:0")
+    .await
     .context("Failed to bind local UDP socket")?;
 
-  debug!("Local socket {} successfully bound", target_socket.local_addr()?);
+  debug!(
+    "Local socket {} successfully bound",
+    target_socket.local_addr()?
+  );
 
   if let Err(e) = target_socket.connect(proxy_addr).await {
     error!("Failed to connect to target addr {}: {:?}", proxy_addr, e);
     return Err(e).context("Failed to connect to target addr");
   }
 
-  debug!("Successfully connected to target {} from {}", target_socket.peer_addr()?, target_socket.local_addr()?);
+  debug!(
+    "Successfully connected to target {} from {}",
+    target_socket.peer_addr()?,
+    target_socket.local_addr()?
+  );
 
   let socket_arc = Arc::new(target_socket);
 
@@ -33,7 +44,7 @@ pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sy
     token.clone(),
     dtls_conn.clone(),
     socket_arc,
-    None
+    None,
   );
 
   let (upstream, downstream) = proxy_bridge.spawn()?;
@@ -43,7 +54,8 @@ pub async fn handle_encrypted_udp_connection(dtls_conn: Arc<dyn Conn + Send + Sy
       _ = upstream => { debug!("Client task finished"); },
       _ = downstream => { debug!("Target task finished"); },
     }
-  }).await;
+  })
+  .await;
 
   if result.is_err() {
     info!("Connection timed out due to inactivity");
