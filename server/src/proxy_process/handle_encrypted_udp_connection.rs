@@ -4,9 +4,8 @@ use anyhow::{Context, Result};
 use tokio::net::UdpSocket;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info};
+use turn_proxy_lib::proxy::bridge::ProxyBridge;
 use webrtc_util::Conn;
-
-use crate::proxy_process::proxy_flow::{ProxyBridge, proxy_flow};
 
 pub async fn handle_encrypted_udp_connection(
   dtls_conn: Arc<dyn Conn + Send + Sync>,

@@ -19,6 +19,7 @@ clap.workspace = true
 anyhow.workspace = true
 webrtc-util.workspace = true
 tokio-util.workspace = true
+turn-proxy-lib.workspace = true
 
 turn = "0.17.1"
 reqwest = { version = "0.13.2", features = ["json", "form", "hickory-dns"] }
@@ -42,16 +43,28 @@ DTLS proxy client designed to relay UDP traffic through TURN servers
 to bypass restrictive networks or analyze video call traffic.
 """
 assets = [
-    ["target/release/turn-proxy-client", "/usr/bin/turn-proxy-client", "755"],
-    ["services/systemd/turn-proxy-client.service", "/lib/systemd/system/turn-proxy-client.service", "644"],
-    ["example.toml", "/etc/turn-proxy/client/config.toml", "644"],
+    [
+        "target/release/turn-proxy-client",
+        "/usr/bin/turn-proxy-client",
+        "755",
+    ],
+    [
+        "services/systemd/turn-proxy-client.service",
+        "/lib/systemd/system/turn-proxy-client.service",
+        "644",
+    ],
+    [
+        "example.toml",
+        "/etc/turn-proxy/client/config.toml",
+        "644",
+    ],
 ]
 
 [package.metadata.generate-rpm]
 assets = [
     { source = "target/release/turn-proxy-client", dest = "/usr/bin/turn-proxy-client", mode = "755" },
     { source = "services/systemd/turn-proxy-client.service", dest = "/usr/lib/systemd/system/turn-proxy-client.service", mode = "644" },
-    { source = "example.toml", dest = "/etc/turn-proxy/client/config.toml", mode = "644" }
+    { source = "example.toml", dest = "/etc/turn-proxy/client/config.toml", mode = "644" },
 ]
 post_install = """
 systemctl daemon-reload

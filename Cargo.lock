@@ -3178,7 +3178,20 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "turn",
+ "turn-proxy-lib",
  "uuid",
+ "webrtc-util",
+]
+
+[[package]]
+name = "turn-proxy-lib"
+version = "1.0.9"
+dependencies = [
+ "anyhow",
+ "serde",
+ "tokio",
+ "tokio-util",
+ "tracing",
  "webrtc-util",
 ]
 
@@ -3197,6 +3210,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "turn-proxy-lib",
  "webrtc-util",
 ]
 

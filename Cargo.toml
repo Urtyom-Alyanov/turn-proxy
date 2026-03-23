@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "client"]
+members = ["server", "client", "lib"]
 resolver = "2"
 
 [workspace.package]
@@ -22,6 +22,7 @@ clap = { version = "4.6.0", features = ["derive"] }
 anyhow = "1.0.102"
 webrtc-util = { version = "0.17.1", features = ["conn"] }
 tokio-util = "0.7.18"
+turn-proxy-lib = { path = "lib" }
 
 [profile.dist]
 inherits = "release"

@@ -4,9 +4,10 @@ use anyhow::Result;
 use futures_util::future::select_all;
 use tokio::{net::UdpSocket, sync::RwLock, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
+use turn_proxy_lib::proxy::bridge::ProxyBridge;
 use webrtc_util::Conn;
 
-use crate::proxy_process::{proxy_flow::ProxyBridge, target_conn::TargetedConn};
+use crate::proxy_process::target_conn::TargetedConn;
 
 pub async fn run_bridge_thread(
   thread_num: usize,
