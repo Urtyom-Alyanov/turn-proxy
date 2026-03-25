@@ -73,7 +73,6 @@ pub async fn listening(
         let p_addr = peer_addr;
         let t_token = cancel_token.child_token();
         let dtls_cert_copy = dtls_config.clone();
-        let write_addr = config.common.write_addr.clone();
         let interface_addr = match config.common.interface_addr.as_ref() {
           Some(s) => s
             .parse::<IpAddr>()
@@ -88,7 +87,6 @@ pub async fn listening(
             &p_clone,
             p_addr,
             dtls_cert_copy,
-            write_addr,
           )
           .await?;
 

@@ -23,7 +23,6 @@ pub async fn setup_connection(
   provider: &ProviderConfiguration,
   peer_addr: SocketAddr,
   dtls_config: DtlsConfig,
-  write_addr: Option<bool>,
 ) -> Result<Arc<dyn Conn + Send + Sync>>
 {
   let bind_addr = SocketAddr::new(interface_addr, 0);

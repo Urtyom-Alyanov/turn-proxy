@@ -5,7 +5,9 @@ use clap::Parser;
 
 use crate::configuration::{
   args::{Args, ProviderType},
-  configuration::{AppConfiguration, DefaultProvider, ProviderConfiguration, ProviderDetails},
+  configuration::{
+    AppConfiguration, DefaultProvider, ProviderConfiguration, ProviderDetails,
+  },
 };
 
 pub fn init_config() -> Result<AppConfiguration>
@@ -17,8 +19,9 @@ pub fn init_config() -> Result<AppConfiguration>
   let args = Args::parse();
 
   let mut config = if fs::metadata(&args.config).is_ok() {
-    let content = fs::read_to_string(&args.config)
-      .with_context(|| format!("Failed to read config file: {}", args.config))?;
+    let content = fs::read_to_string(&args.config).with_context(|| {
+      format!("Failed to read config file: {}", args.config)
+    })?;
     toml::from_str::<AppConfiguration>(&content)
       .with_context(|| format!("Failed to parse TOML from: {}", args.config))?
   } else {
@@ -37,9 +40,6 @@ pub fn init_config() -> Result<AppConfiguration>
   if let Some(peer) = args.peer_addr {
     config.common.peer_addr = peer;
   }
-  if let Some(write_addr) = args.write_addr {
-    config.common.write_addr = Some(write_addr);
-  }
 
   if let Some(provider_type) = args.provider_type {
     if !matches!(provider_type, ProviderType::FromConfigFile) {
@@ -47,7 +47,9 @@ pub fn init_config() -> Result<AppConfiguration>
 
       let details = match provider_type {
         ProviderType::Direct => ProviderDetails::Direct,
-        ProviderType::Default { kind, link } => ProviderDetails::Default { kind, link },
+        ProviderType::Default { kind, link } => {
+          ProviderDetails::Default { kind, link }
+        }
         ProviderType::Custom {
           username,
           password,

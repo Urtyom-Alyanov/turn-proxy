@@ -36,8 +36,7 @@ pub struct CommonConfiguration
   pub listening_on: String,
   /// Конечный сервер
   pub peer_addr: String,
-  /// Выписывание адресов
-  pub write_addr: Option<bool>,
+  /// Адрес интерфейса сети
   pub interface_addr: Option<String>,
 }
 
