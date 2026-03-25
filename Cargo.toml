@@ -23,6 +23,7 @@ anyhow = "1.0.102"
 webrtc-util = { version = "0.17.1", features = ["conn"] }
 tokio-util = "0.7.18"
 turn-proxy-lib = { path = "lib" }
+futures-util = "0.3.32"
 
 [profile.dist]
 inherits = "release"

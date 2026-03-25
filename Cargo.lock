@@ -3188,6 +3188,7 @@ name = "turn-proxy-lib"
 version = "1.0.9"
 dependencies = [
  "anyhow",
+ "futures-util",
  "serde",
  "tokio",
  "tokio-util",

@@ -13,3 +13,4 @@ tokio-util.workspace = true
 webrtc-util.workspace = true
 tracing.workspace = true
 anyhow.workspace = true
+futures-util.workspace = true

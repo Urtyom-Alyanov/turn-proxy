@@ -1,12 +1,12 @@
 use std::sync::Arc;
-
+use std::time::Duration;
 use anyhow::Result;
 use futures_util::future::select_all;
 use tokio::{net::UdpSocket, sync::RwLock, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use turn_proxy_lib::proxy::bridge::ProxyBridge;
 use webrtc_util::Conn;
-
+use turn_proxy_lib::proxy::run_proxy_bridge;
 use crate::proxy_process::target_conn::TargetedConn;
 
 pub async fn run_bridge_thread(
@@ -16,30 +16,14 @@ pub async fn run_bridge_thread(
   token: CancellationToken,
 ) -> Result<()>
 {
-  let mut handles: Vec<JoinHandle<Result<()>>> = vec![];
-  let local_conn = Arc::new(TargetedConn {
-    inner: listen_conn.clone(),
-    remote_addr: listen_conn.local_addr()?,
-  });
-
-  let thread_id = format!("T{}", thread_num);
-  let bridge = ProxyBridge::new(
-    thread_id,
-    token.clone(),
-    local_conn,
+  let thread_name = format!("T{}", thread_num);
+  
+  run_proxy_bridge(
+    thread_name,
+    token,
+    Some(Duration::from_secs(150)),
+    listen_conn,
     remote_conn,
-    Some(Arc::new(RwLock::new(None))),
-  );
-
-  let (up, down) = bridge.spawn()?;
-
-  handles.push(up);
-  handles.push(down);
-
-  if let Some(result) = select_all(handles).await.0.ok() {
-    result?;
-  }
-
-  token.cancel();
-  Ok(())
+    true
+  ).await
 }

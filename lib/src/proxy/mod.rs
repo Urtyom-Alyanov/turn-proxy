@@ -31,26 +31,9 @@ pub async fn run_proxy_bridge(
     token.clone(),
     first_conn,
     last_conn,
-    cache_addr
+    cache_addr,
+    idle_timeout
   );
 
-  let (up, down) = bridge.spawn()?;
-
-  let bridge_future = async {
-    tokio::select! {
-      res = up => { debug!("Upstream finished: {:?}", res); },
-      res = down => { debug!("Downstream finished: {:?}", res); },
-    }
-  };
-
-  if let Some(t) = idle_timeout {
-    if timeout(t, bridge_future).await.is_err() {
-      info!("Bridge connection timed out");
-    }
-  } else {
-    bridge_future.await;
-  }
-
-  token.cancel();
-  Ok(())
+  bridge.run().await
 }

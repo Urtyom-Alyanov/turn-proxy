@@ -3,9 +3,9 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 use anyhow::{Context, Result};
 use tokio::net::UdpSocket;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info};
-use turn_proxy_lib::proxy::bridge::ProxyBridge;
+use tracing::{debug, error};
 use webrtc_util::Conn;
+use turn_proxy_lib::proxy::run_proxy_bridge;
 
 pub async fn handle_encrypted_udp_connection(
   dtls_conn: Arc<dyn Conn + Send + Sync>,
@@ -36,34 +36,18 @@ pub async fn handle_encrypted_udp_connection(
 
   // Через 2 минуты без данных TURN (по крайней мере от ВК) обрывает соединение,
   // поэтому оставлять его активным бессмысленно и даже вредит, так как не
-  // остаётся свободных портов
-  let idle_timeout = Duration::from_mins(2);
+  // остаётся свободных портов. Так же сам WireGuard отправляет запросы с
+  // рукопожатием каждые 2 минуты
+  let idle_timeout = Duration::from_secs(150);
 
   let token = CancellationToken::new();
 
-  let proxy_bridge = ProxyBridge::new(
-    String::new(),
-    token.clone(),
-    dtls_conn.clone(),
+  run_proxy_bridge(
+    "SERVER".to_owned(),
+    token,
+    Some(idle_timeout),
+    dtls_conn,
     socket_arc,
-    None,
-  );
-
-  let (upstream, downstream) = proxy_bridge.spawn()?;
-
-  let result = tokio::time::timeout(idle_timeout, async {
-    tokio::select! {
-      _ = upstream => { debug!("Client task finished"); },
-      _ = downstream => { debug!("Target task finished"); },
-    }
-  })
-  .await;
-
-  if result.is_err() {
-    info!("Connection timed out due to inactivity");
-    token.cancel();
-  }
-
-  let _ = dtls_conn.close().await;
-  Ok(())
+    false
+  ).await
 }
