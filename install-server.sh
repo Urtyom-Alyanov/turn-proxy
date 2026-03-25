@@ -24,7 +24,7 @@ else
     exit 1
 fi
 
-DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -Po '"browser_download_url": "\K[^"]*?'"turn-proxy-server"'[^"]*?'"$PKG_EXT"'(?=")' | head -n 1)
+DOWNLOAD_URL=$(echo "$LATEST_RELEASE" | grep -Po '"browser_download_url": "\K[^"]*?turn-proxy-server[^"]*?'"$PKG_EXT"'(?=")' | head -n 1)
 
 if [ -z "$DOWNLOAD_URL" ]; then
     echo "Ошибка: Не удалось найти пакет .$PKG_EXT в релизе."
