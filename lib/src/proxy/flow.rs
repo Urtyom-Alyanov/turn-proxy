@@ -22,7 +22,7 @@ pub fn proxy_flow(
 ) -> JoinHandle<Result<()>>
 {
   tokio::spawn(async move {
-    let mut buf = [0u8; 2048];
+    let mut buf = [0u8; 4096];
 
     loop {
       match from_flow.recv_from(&mut buf).await {

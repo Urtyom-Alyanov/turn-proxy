@@ -1,6 +1,6 @@
 mod datatypes;
 
-use std::sync::LazyLock;
+use std::{net::IpAddr, sync::LazyLock};
 
 use anyhow::{Context, Result, anyhow};
 use futures_util::{sink::SinkExt, stream::StreamExt};
@@ -8,13 +8,17 @@ use reqwest::header::{HeaderMap, HeaderValue};
 use serde_json::json;
 use tokio_tungstenite::{
   connect_async,
-  tungstenite::{handshake::client::Request as TungsteniteRequest, protocol::Message},
+  tungstenite::{
+    handshake::client::Request as TungsteniteRequest, protocol::Message,
+  },
 };
 use uuid::Uuid;
 
 use crate::{
   inbound::{USER_AGENT, create_inbound_client},
-  providers::yandex::datatypes::{ConferenceResponse, HelloPayload, HelloRequest, WssResponse},
+  providers::yandex::datatypes::{
+    ConferenceResponse, HelloPayload, HelloRequest, WssResponse,
+  },
   proxy_process::turn_configure::TurnCredentials,
 };
 
@@ -26,31 +30,33 @@ static YANDEX_SDK_INFO: LazyLock<serde_json::Value> = LazyLock::new(|| {
     "userAgent": USER_AGENT, "hwConcurrency": 4
   })
 });
-static YANDEX_CAPABILITIES_OFFER: LazyLock<serde_json::Value> = LazyLock::new(|| {
-  json!({
-    "offerAnswerMode": ["SEPARATE"],
-    "initialSubscriberOffer": ["ON_HELLO"],
-    "slotsMode": ["FROM_CONTROLLER"],
-    "simulcastMode": ["DISABLED"],
-    "selfVadStatus": ["FROM_SERVER"],
-    "dataChannelSharing": ["TO_RTP"],
-    "videoEncoderConfig": ["NO_CONFIG"],
-    "dataChannelVideoCodec": ["VP8"],
-    "bandwidthLimitationReason": ["BANDWIDTH_REASON_DISABLED"],
-    "sdkDefaultDeviceManagement": ["SDK_DEFAULT_DEVICE_MANAGEMENT_DISABLED"],
-    "joinOrderLayout": ["JOIN_ORDER_LAYOUT_DISABLED"],
-    "pinLayout": ["PIN_LAYOUT_DISABLED"],
-    "sendSelfViewVideoSlot": ["SEND_SELF_VIEW_VIDEO_SLOT_DISABLED"],
-    "serverLayoutTransition": ["SERVER_LAYOUT_TRANSITION_DISABLED"],
-    "sdkPublisherOptimizeBitrate": ["SDK_PUBLISHER_OPTIMIZE_BITRATE_DISABLED"],
-    "sdkNetworkLostDetection": ["SDK_NETWORK_LOST_DETECTION_DISABLED"],
-    "sdkNetworkPathMonitor": ["SDK_NETWORK_PATH_MONITOR_DISABLED"],
-    "publisherVp9": ["PUBLISH_VP9_DISABLED"],
-    "svcMode": ["SVC_MODE_DISABLED"],
-    "subscriberOfferAsyncAck": ["SUBSCRIBER_OFFER_ASYNC_ACK_DISABLED"],
-    "svcModes": ["FALSE"], "reportTelemetryModes": ["TRUE"], "keepDefaultDevicesModes": ["TRUE"]
-  })
-});
+static YANDEX_CAPABILITIES_OFFER: LazyLock<serde_json::Value> = LazyLock::new(
+  || {
+    json!({
+      "offerAnswerMode": ["SEPARATE"],
+      "initialSubscriberOffer": ["ON_HELLO"],
+      "slotsMode": ["FROM_CONTROLLER"],
+      "simulcastMode": ["DISABLED"],
+      "selfVadStatus": ["FROM_SERVER"],
+      "dataChannelSharing": ["TO_RTP"],
+      "videoEncoderConfig": ["NO_CONFIG"],
+      "dataChannelVideoCodec": ["VP8"],
+      "bandwidthLimitationReason": ["BANDWIDTH_REASON_DISABLED"],
+      "sdkDefaultDeviceManagement": ["SDK_DEFAULT_DEVICE_MANAGEMENT_DISABLED"],
+      "joinOrderLayout": ["JOIN_ORDER_LAYOUT_DISABLED"],
+      "pinLayout": ["PIN_LAYOUT_DISABLED"],
+      "sendSelfViewVideoSlot": ["SEND_SELF_VIEW_VIDEO_SLOT_DISABLED"],
+      "serverLayoutTransition": ["SERVER_LAYOUT_TRANSITION_DISABLED"],
+      "sdkPublisherOptimizeBitrate": ["SDK_PUBLISHER_OPTIMIZE_BITRATE_DISABLED"],
+      "sdkNetworkLostDetection": ["SDK_NETWORK_LOST_DETECTION_DISABLED"],
+      "sdkNetworkPathMonitor": ["SDK_NETWORK_PATH_MONITOR_DISABLED"],
+      "publisherVp9": ["PUBLISH_VP9_DISABLED"],
+      "svcMode": ["SVC_MODE_DISABLED"],
+      "subscriberOfferAsyncAck": ["SUBSCRIBER_OFFER_ASYNC_ACK_DISABLED"],
+      "svcModes": ["FALSE"], "reportTelemetryModes": ["TRUE"], "keepDefaultDevicesModes": ["TRUE"]
+    })
+  },
+);
 
 pub fn get_yandex_call_id_from_link(link: &str) -> Result<&str>
 {
@@ -64,11 +70,12 @@ pub fn get_yandex_call_id_from_link(link: &str) -> Result<&str>
 }
 
 pub async fn get_yandex_telebridge_turn_credentials(
+  interface: IpAddr,
   call_id: &str,
   with_name: Option<String>,
 ) -> Result<TurnCredentials>
 {
-  let client = create_inbound_client().await?;
+  let client = create_inbound_client(interface).await?;
   let endpoint = format!(
     "https://cloud-api.yandex.ru/telemost_front/v2/telemost/conferences/https%3A%2F%2Ftelemost.yandex.ru%2Fj%2F{}/connection?next_gen_media_platform_allowed=false",
     call_id
@@ -99,7 +106,8 @@ pub async fn get_yandex_telebridge_turn_credentials(
 
   let name = with_name.unwrap_or("Гость".to_owned());
 
-  let ws_request = ws_request_builder(&conf_resp.client_configuration.media_server_url)?;
+  let ws_request =
+    ws_request_builder(&conf_resp.client_configuration.media_server_url)?;
   let (mut ws_stream, _) = connect_async(ws_request)
     .await
     .map_err(|e| anyhow!("WS connect error: {}", e))?;

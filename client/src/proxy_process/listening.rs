@@ -1,22 +1,27 @@
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+  net::{IpAddr, SocketAddr},
+  sync::Arc,
+  time::Duration,
+};
 
 use anyhow::{Context, Result};
 use dtls::config::Config as DtlsConfig;
 use tokio::{net::UdpSocket, task::JoinSet};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
-use webrtc_util::Conn;
 
 use crate::{
-  configuration::configuration::{AppConfiguration, ProviderConfiguration},
-  dtls::dtls_configure::dtls_process_handshake,
+  configuration::configuration::AppConfiguration,
+  inbound::interface::get_current_interface,
   proxy_process::{
-    run_bridge_group::run_bridge_thread, setup_and_run_provider::setup_and_run_provider,
-    target_conn::TargetedConn,
+    run_bridge_group::run_bridge_thread, setup_connection::setup_connection,
   },
 };
 
-pub async fn listening(config: AppConfiguration, dtls_config: DtlsConfig) -> Result<()>
+pub async fn listening(
+  config: AppConfiguration,
+  dtls_config: DtlsConfig,
+) -> Result<()>
 {
   let listen_addr: SocketAddr = config
     .common
@@ -32,7 +37,8 @@ pub async fn listening(config: AppConfiguration, dtls_config: DtlsConfig) -> Res
   info!("Listening on: {} UDP", listen_addr);
   info!("Proxying to: {} DTLS UDP", peer_addr);
 
-  let listen_socket: Arc<UdpSocket> = Arc::new(UdpSocket::bind(listen_addr).await?);
+  let listen_socket: Arc<UdpSocket> =
+    Arc::new(UdpSocket::bind(listen_addr).await?);
 
   let cancel_token = CancellationToken::new();
 
@@ -68,10 +74,17 @@ pub async fn listening(config: AppConfiguration, dtls_config: DtlsConfig) -> Res
         let t_token = cancel_token.child_token();
         let dtls_cert_copy = dtls_config.clone();
         let write_addr = config.common.write_addr.clone();
+        let interface_addr = match config.common.interface_addr.as_ref() {
+          Some(s) => s
+            .parse::<IpAddr>()
+            .unwrap_or(get_current_interface().await?),
+          None => get_current_interface().await?,
+        };
 
         handles.spawn(async move {
           let conn = setup_connection(
             format!("T{}", thread_id).as_str(),
+            interface_addr,
             &p_clone,
             p_addr,
             dtls_cert_copy,
@@ -120,40 +133,4 @@ pub async fn listening(config: AppConfiguration, dtls_config: DtlsConfig) -> Res
   // }).await;
 
   Ok(())
-}
-
-async fn setup_connection(
-  thread_id: &str,
-  provider: &ProviderConfiguration,
-  peer_addr: SocketAddr,
-  dtls_config: DtlsConfig,
-  write_addr: Option<bool>,
-) -> Result<Arc<dyn Conn + Send + Sync>>
-{
-  let outbound = UdpSocket::bind("0.0.0.0:0").await?;
-
-  let base_conn = Arc::new(outbound) as Arc<dyn Conn + Send + Sync>;
-
-  let remote_conn = setup_and_run_provider(provider, base_conn, peer_addr).await?;
-
-  if let Ok(proxy_addr) = remote_conn.local_addr() {
-    if write_addr.unwrap_or(false) {
-      println!("{}", proxy_addr.ip());
-    }
-  };
-
-  let targeted_conn = Arc::new(TargetedConn {
-    inner: remote_conn,
-    remote_addr: peer_addr,
-  });
-
-  let secure_conn: Arc<dyn Conn + Sync + Send> = if provider.using_dtls_obfuscation {
-    dtls_process_handshake(thread_id, targeted_conn, dtls_config)
-      .await
-      .context("Failed to configure DTLS connection")?
-  } else {
-    targeted_conn
-  };
-
-  Ok(secure_conn)
 }

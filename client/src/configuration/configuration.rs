@@ -38,6 +38,7 @@ pub struct CommonConfiguration
   pub peer_addr: String,
   /// Выписывание адресов
   pub write_addr: Option<bool>,
+  pub interface_addr: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Default, Clone)]
@@ -46,8 +47,8 @@ pub struct ProviderConfiguration
   /// Приоритет, если не задан то Direct -> Custom -> VK Calls ->
   /// Yandex.Telemost
   pub priority: Option<u32>,
-  /// Не использовать UDP для TURN сервера поставщика (может понизить скорость),
-  /// не знаю зачем это кому-то, на другие параметры не влияет
+  /// Не использовать UDP для TURN сервера поставщика (может понизить
+  /// скорость), не знаю зачем это кому-то, на другие параметры не влияет
   ///
   /// По умолчанию `true`
   pub using_udp: bool,

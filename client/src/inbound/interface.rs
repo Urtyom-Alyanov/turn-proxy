@@ -3,18 +3,22 @@ use std::net::IpAddr;
 use anyhow::{Result, anyhow};
 use net_route::Handle;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
+use tracing::info;
 
 /// Получаем стандартный на момент подключения к провайдеру IP интерфейса, чтобы
 /// при включении туннелирования не было такого, что запросы идут не туда куда
 /// надо
 pub async fn get_current_interface() -> Result<IpAddr>
 {
+  info!("Getting current network interface...");
   let handle = Handle::new()?;
   let routes = handle.list().await?;
 
   let default_route = routes
     .iter()
-    .find(|r| r.destination == "0.0.0.0".parse::<IpAddr>().unwrap() && r.prefix == 0)
+    .find(|r| {
+      r.destination == "0.0.0.0".parse::<IpAddr>().unwrap() && r.prefix == 0
+    })
     .expect("Default gateway is not founded (network has working?)");
 
   let iface_index = default_route
@@ -32,6 +36,11 @@ pub async fn get_current_interface() -> Result<IpAddr>
     .iter()
     .find(|a| a.ip().is_ipv4())
     .map(|a| a.ip());
+
+  info!(
+    "Current network interface IP: {}",
+    ip.unwrap_or_else(|| "Not found".parse().unwrap())
+  );
 
   Ok(ip.ok_or_else(|| anyhow!("Unexpected error on ip interface getting"))?)
 }

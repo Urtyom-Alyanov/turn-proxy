@@ -15,7 +15,7 @@ const YANDEX_DNS_SECOND_IP: &str = "77.88.8.1";
 #[derive(Debug)]
 pub struct YandexDnsResolver
 {
-  inner: Arc<Resolver<GenericConnector<TokioRuntimeProvider>>>,
+  pub inner: Arc<Resolver<GenericConnector<TokioRuntimeProvider>>>,
 }
 
 impl Resolve for YandexDnsResolver
@@ -42,16 +42,23 @@ pub fn configure_yandex_dns() -> Result<YandexDnsResolver>
 {
   let mut config = ResolverConfig::new();
 
-  config.add_name_server(NameServerConfig::new(
-    YANDEX_DNS_FIRST_IP.parse()?,
-    Protocol::Udp,
-  ));
-  config.add_name_server(NameServerConfig::new(
-    YANDEX_DNS_SECOND_IP.parse()?,
-    Protocol::Udp,
-  ));
+  // config.add_name_server(NameServerConfig::new(
+  //   YANDEX_DNS_FIRST_IP.parse()?,
+  //   Protocol::Udp,
+  // ));
+  // config.add_name_server(NameServerConfig::new(
+  //   YANDEX_DNS_SECOND_IP.parse()?,
+  //   Protocol::Udp,
+  // ));
 
-  let resolver = Resolver::builder_with_config(config, TokioConnectionProvider::default()).build();
+  for ip in [YANDEX_DNS_FIRST_IP, YANDEX_DNS_SECOND_IP] {
+    let addr = SocketAddr::new(ip.parse()?, 53);
+    config.add_name_server(NameServerConfig::new(addr, Protocol::Udp));
+  }
+
+  let resolver =
+    Resolver::builder_with_config(config, TokioConnectionProvider::default())
+      .build();
 
   Ok(YandexDnsResolver {
     inner: Arc::new(resolver),
