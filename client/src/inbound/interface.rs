@@ -19,7 +19,7 @@ pub async fn get_current_interface() -> Result<IpAddr>
 
   let iface_index = default_route
     .ifindex
-    .ok_or_else(|| anyhow!("Default gatefay index has not seted"))?;
+    .ok_or_else(|| anyhow!("Default gateway index has not defined"))?;
 
   let interfaces = NetworkInterface::show()?;
   let active_iface = interfaces

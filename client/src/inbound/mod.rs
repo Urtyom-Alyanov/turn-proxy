@@ -13,7 +13,7 @@ mod interface;
 pub const USER_AGENT: &str =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0";
 
-/// Создаём исходный клиент для запросов к провайдером внутри белых списков
+/// Создаём исходный клиент для запросов к провайдерам внутри белых списков
 pub async fn create_inbound_client() -> Result<Client>
 {
   let ip_interface = get_current_interface().await?;
