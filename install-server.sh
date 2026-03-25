@@ -1,18 +1,16 @@
 #!/bin/bash
 set -e
 
-REPO="Urtyom-Alyanov/turn-proxy-server"
+REPO="Urtyom-Alyanov/turn-proxy"
 GITHUB_API="https://api.github.com/repos/$REPO/releases/latest"
 
 echo "Поиск последней версии $REPO..."
 
-# Получаем прямые ссылки на ассеты через API
 LATEST_RELEASE=$(curl -s $GITHUB_API)
 VERSION=$(echo "$LATEST_RELEASE" | grep -Po '"tag_name": "\K.*?(?=")')
 
 echo "Найдена версия: $VERSION"
 
-# Определяем менеджер пакетов
 if [ -f /etc/debian_version ]; then
     PKG_EXT="deb"
     INSTALL_CMD="sudo apt install"
