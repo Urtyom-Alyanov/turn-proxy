@@ -33,13 +33,6 @@ pub async fn run_bridge_thread(
 
   let (up, down) = bridge.spawn()?;
 
-  // let up = bridge
-  //   .run_upstream(local_conn.clone(), remote_conn.clone())
-  //   .await?;
-  // let down = bridge
-  //   .run_downstream(local_conn.clone(), remote_conn.clone())
-  //   .await?;
-
   handles.push(up);
   handles.push(down);
 
