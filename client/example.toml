@@ -1,6 +1,7 @@
 [common]
 listening_on = "127.0.0.1:51821"
 peer_addr = "127.0.0.1:56040"
+interface_addr = "10.77.173.50"  # Задать интерфейс статитчески
 
 [[providers]]
 priority = 1
