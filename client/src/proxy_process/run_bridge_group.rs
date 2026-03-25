@@ -1,13 +1,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 use anyhow::Result;
-use futures_util::future::select_all;
-use tokio::{net::UdpSocket, sync::RwLock, task::JoinHandle};
+use tokio::{net::UdpSocket};
 use tokio_util::sync::CancellationToken;
-use turn_proxy_lib::proxy::bridge::ProxyBridge;
 use webrtc_util::Conn;
 use turn_proxy_lib::proxy::run_proxy_bridge;
-use crate::proxy_process::target_conn::TargetedConn;
 
 pub async fn run_bridge_thread(
   thread_num: usize,

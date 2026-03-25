@@ -3,9 +3,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use tokio::sync::RwLock;
-use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info};
 use webrtc_util::Conn;
 use crate::proxy::bridge::ProxyBridge;
 
