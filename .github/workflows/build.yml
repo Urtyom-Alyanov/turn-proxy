@@ -10,7 +10,12 @@ permissions:
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,39 +23,57 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install Packaging Tools
+      - name: Install Packaging Tools (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y rpm build-essential
           cargo install cargo-deb
           cargo install cargo-generate-rpm
 
-      - name: Build Release
-        run: cargo build --release -p turn-proxy-server
+      - name: Build Release (All members)
+        run: |
+          cargo build --release -p turn-proxy-server
+          cargo build --release -p turn-proxy-client
 
-      - name: Build Debian Package
-        run: cargo deb -p turn-proxy-server
+      - name: Build Debian & RPM (Linux Only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cargo deb -p turn-proxy-server
+          cargo deb -p turn-proxy-client
+          cargo generate-rpm -p server
+          cargo generate-rpm -p client
 
-      - name: Build RPM Package
-        run: cargo generate-rpm -p server
-
-      - name: Prepare Artifacts
+      - name: Prepare Artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           mkdir -p artifacts
           cp target/release/turn-proxy-server artifacts/
+          cp target/release/turn-proxy-client artifacts/
           cp target/debian/*.deb artifacts/
           cp target/generate-rpm/*.rpm artifacts/
-          cd target/release
-          tar -czvf ../../artifacts/turn-proxy-server-linux-x64.tar.gz turn-proxy-server
+          tar -czvf artifacts/turn-proxy-linux-x64.tar.gz -C target/release turn-proxy-server turn-proxy-client
 
-      - name: Release
+      - name: Prepare Artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts
+          Copy-Item "target/release/turn-proxy-server.exe" -Destination "artifacts/"
+          Copy-Item "target/release/turn-proxy-client.exe" -Destination "artifacts/"
+          Compress-Archive -Path "target/release/turn-proxy-server.exe", "target/release/turn-proxy-client.exe" -DestinationPath "artifacts/turn-proxy-windows-x64.zip"
+
+      - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             artifacts/*.deb
             artifacts/*.rpm
             artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/*.exe
             artifacts/turn-proxy-server
+            artifacts/turn-proxy-client
           generate_release_notes: true
           draft: false
           prerelease: false
