@@ -34,7 +34,10 @@ pub async fn handle_encrypted_udp_connection(
 
   let socket_arc = Arc::new(target_socket);
 
-  let idle_timeout = Duration::from_hours(6);
+  // Через 2 минуты без данных TURN (по крайней мере от ВК) обрывает соединение,
+  // поэтому оставлять его активным бессмысленно и даже вредит, так как не
+  // остаётся свободных портов
+  let idle_timeout = Duration::from_mins(2);
 
   let token = CancellationToken::new();
 
