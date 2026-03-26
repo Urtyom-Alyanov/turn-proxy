@@ -3,7 +3,8 @@
 ![GitHub License](https://img.shields.io/github/license/Urtyom-Alyanov/turn-proxy?style=for-the-badge&logo=gplv3&logoColor=FFFFFF)
 ![GitHub repo size](https://img.shields.io/github/repo-size/Urtyom-Alyanov/turn-proxy?style=for-the-badge&logo=github&logoColor=FFFFFF)
 ![GitHub top language](https://img.shields.io/github/languages/top/Urtyom-Alyanov/turn-proxy?style=for-the-badge&logo=rust&color=FF8000&logoColor=FFFFFF)
-![GitHub branch status](https://img.shields.io/github/checks-status/Urtyom-Alyanov/turn-proxy/main?style=for-the-badge&logo=githubactions&logoColor=FFFFFF)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Urtyom-Alyanov/turn-proxy/check.yml?style=for-the-badge&label=Checks)
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Urtyom-Alyanov/turn-proxy/build.yml?style=for-the-badge&label=Builds)
 ![Last Commit](https://img.shields.io/github/last-commit/Urtyom-Alyanov/turn-proxy?style=for-the-badge&logo=git&logoColor=FFFFFF)
 
 ## Отказ от ответственности (дисклеймер)
