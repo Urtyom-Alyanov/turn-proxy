@@ -107,23 +107,23 @@ in
       listeningOn = mkOption {
         type = types.str;
         default = "127.0.0.1:51820";
-        description = "Адрес входа/выхода.";
+        description = "Адрес входа/выхода";
       };
       peerAddr = mkOption {
         type = types.str;
-        description = "Конечный сервер.";
+        description = "Конечный сервер";
       };
       interfaceAddr = mkOption {
         type = types.nullOr types.str;
         default = null;
-        description = "Адрес интерфейса сети.";
+        description = "Адрес интерфейса сети";
       };
     };
 
     providers = mkOption {
       type = types.listOf (types.submodule providerModule);
       default = [ ];
-      description = "Список конфигураций провайдеров.";
+      description = "Список конфигураций провайдеров";
     };
   };
 

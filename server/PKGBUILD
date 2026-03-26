@@ -4,11 +4,11 @@ pkgver=1.0.11
 pkgrel=1
 pkgdesc="DTLS proxy server for TURN-based video call traffic relay"
 arch=('x86_64' 'aarch64')
-url="https://github.com/Urtyom-Alyanov/turn-proxy-server"
+url="https://github.com/Urtyom-Alyanov/turn-proxy"
 license=('AGPL3')
 depends=('gcc-libs')
 makedepends=('rust' 'cargo')
-source=("$pkgname-$pkgver.tar.gz::https://github.com/Urtyom-Alyanov/turn-proxy-server/archive/v$pkgver.tar.gz")
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Urtyom-Alyanov/turn-proxy/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 prepare() {
@@ -19,12 +19,12 @@ prepare() {
 build() {
     cd "turn-proxy-$pkgver"
     export RUSTUP_TOOLCHAIN=stable
-    cargo build --frozen --release --all-features
+    cargo build -p turn-proxy-server --frozen --release --all-features
 }
 
 check() {
     cd "turn-proxy-$pkgver"
-    cargo test --frozen
+    cargo test -p turn-proxy-server --frozen
 }
 
 package() {
@@ -34,12 +34,12 @@ package() {
     install -Dm755 "target/release/turn-proxy-server" "$pkgdir/usr/bin/turn-proxy-server"
 
     # Установка конфига по умолчанию
-    install -Dm644 "example.toml" "$pkgdir/etc/turn-proxy/server/config.toml"
+    install -Dm644 "server/example.toml" "$pkgdir/etc/turn-proxy/server/config.toml"
 
-    if [ -f "services/systemd/turn-proxy.service" ]; then
-        install -Dm644 "services/systemd/turn-proxy.service" "$pkgdir/usr/lib/systemd/system/turn-proxy.service"
+    if [ -f " "server/services/systemd/turn-proxy-server.service" ]; then
+        install -Dm644 "server/services/systemd/turn-proxy-server.service" "$pkgdir/usr/lib/systemd/system/turn-proxy-server.service"
     fi
 
-    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+    install -Dm644 server/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 server/README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
 }
