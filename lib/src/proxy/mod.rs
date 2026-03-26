@@ -1,10 +1,10 @@
-use std::sync::Arc;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use webrtc_util::Conn;
+
 use crate::proxy::bridge::ProxyBridge;
 
 pub mod bridge;
@@ -18,10 +18,11 @@ pub async fn run_proxy_bridge(
   first_conn: Arc<dyn Conn + Send + Sync>,
   last_conn: Arc<dyn Conn + Send + Sync>,
   use_cache: bool,
-) -> Result<()> {
+) -> Result<()>
+{
   let cache_addr = match use_cache {
     true => Some(Arc::new(RwLock::new(None))),
-    false => None
+    false => None,
   };
 
   let bridge = ProxyBridge::new(
@@ -30,7 +31,7 @@ pub async fn run_proxy_bridge(
     first_conn,
     last_conn,
     cache_addr,
-    idle_timeout
+    idle_timeout,
   );
 
   bridge.run().await

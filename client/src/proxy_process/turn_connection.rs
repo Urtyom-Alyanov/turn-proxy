@@ -1,9 +1,4 @@
-use std::{
-  any::Any,
-  io::{Error as IoError, ErrorKind},
-  net::SocketAddr,
-  sync::Arc,
-};
+use std::{any::Any, io::Error as IoError, net::SocketAddr, sync::Arc};
 
 use async_trait::async_trait;
 use turn::client::Client as StunClient;
@@ -33,7 +28,8 @@ impl Conn for TurnConn
     self.relay.recv(buf).await
   }
 
-  async fn recv_from(&self, buf: &mut [u8]) -> WebRtcResult<(usize, SocketAddr)>
+  async fn recv_from(&self, buf: &mut [u8])
+  -> WebRtcResult<(usize, SocketAddr)>
   {
     self.relay.recv_from(buf).await
   }
@@ -43,7 +39,8 @@ impl Conn for TurnConn
     self.relay.send(buf).await
   }
 
-  async fn send_to(&self, buf: &[u8], target: SocketAddr) -> WebRtcResult<usize>
+  async fn send_to(&self, buf: &[u8], target: SocketAddr)
+  -> WebRtcResult<usize>
   {
     self.relay.send_to(buf, target).await
   }
@@ -66,6 +63,6 @@ impl Conn for TurnConn
       .client
       .close()
       .await
-      .map_err(|e| webrtc_util::Error::from(IoError::new(ErrorKind::Other, e.to_string())))
+      .map_err(|e| webrtc_util::Error::from(IoError::other(e.to_string())))
   }
 }

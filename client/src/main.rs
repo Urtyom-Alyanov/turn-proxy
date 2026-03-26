@@ -8,8 +8,9 @@ pub mod proxy_process;
 use anyhow::Result;
 
 use crate::{
-  configuration::init_configuration::init_config, dtls::dtls_configure::dtls_configure,
-  logging::init_logger, proxy_process::listening::listening,
+  configuration::init_configuration::init_config,
+  dtls::dtls_configure::dtls_configure, logging::init_logger,
+  proxy_process::listening::listening,
 };
 
 #[tokio::main(flavor = "current_thread")]

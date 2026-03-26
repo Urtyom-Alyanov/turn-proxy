@@ -6,8 +6,8 @@ pub mod proxy_process;
 use anyhow::Result;
 
 use crate::{
-  config::init_configuration::init_config, dtls_process::dtls_configure, logging::init_logging,
-  proxy_process::listening::listening,
+  config::init_configuration::init_config, dtls_process::dtls_configure,
+  logging::init_logging, proxy_process::listening::listening,
 };
 
 #[tokio::main]

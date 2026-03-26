@@ -60,13 +60,11 @@ static YANDEX_CAPABILITIES_OFFER: LazyLock<serde_json::Value> = LazyLock::new(
 
 pub fn get_yandex_call_id_from_link(link: &str) -> Result<&str>
 {
-  Ok(
-    link
-      .trim()
-      .split("j/")
-      .last()
-      .ok_or(anyhow!("Invalid link"))?,
-  )
+  link
+    .trim()
+    .split("j/")
+    .last()
+    .ok_or(anyhow!("Invalid link"))
 }
 
 pub async fn get_yandex_telebridge_turn_credentials(
@@ -134,29 +132,29 @@ pub async fn get_yandex_telebridge_turn_credentials(
   ws_stream.send(Message::Text(msg.into())).await?;
 
   while let Some(Ok(Message::Text(text))) = ws_stream.next().await {
-    if let Ok(resp) = serde_json::from_str::<WssResponse>(&text) {
-      if let Some(hello) = resp.server_hello {
-        for server in hello.rtc_configuration.ice_servers {
-          for url in server.urls {
-            if (url.starts_with("turn:") || url.starts_with("turns:"))
-              && !url.contains("transport=tcp")
-            {
-              let clean_addr = url
-                .trim_start_matches("turn:")
-                .trim_start_matches("turns:")
-                .split('?')
-                .next()
-                .unwrap_or("")
-                .to_string();
+    if let Ok(resp) = serde_json::from_str::<WssResponse>(&text)
+      && let Some(hello) = resp.server_hello
+    {
+      for server in hello.rtc_configuration.ice_servers {
+        for url in server.urls {
+          if (url.starts_with("turn:") || url.starts_with("turns:"))
+            && !url.contains("transport=tcp")
+          {
+            let clean_addr = url
+              .trim_start_matches("turn:")
+              .trim_start_matches("turns:")
+              .split('?')
+              .next()
+              .unwrap_or("")
+              .to_string();
 
-              return Ok(TurnCredentials {
-                username: server.username.context("No WS username")?,
-                password: server.credential.context("No WS password")?,
-                realm: YANDEX_REALM.to_string(),
-                turn_addr: clean_addr.clone(),
-                stun_addr: Some(clean_addr),
-              });
-            }
+            return Ok(TurnCredentials {
+              username: server.username.context("No WS username")?,
+              password: server.credential.context("No WS password")?,
+              realm: YANDEX_REALM.to_string(),
+              turn_addr: clean_addr.clone(),
+              stun_addr: Some(clean_addr),
+            });
           }
         }
       }

@@ -61,7 +61,9 @@ pub async fn dtls_process_handshake(
       info!("[{}] DTLS Handshake completed successfully", thread_name);
       Ok(Arc::new(dtls_conn))
     }
-    Ok(Err(e)) => Err(anyhow!("[{}] DTLS handshake failed: {}", thread_name, e)),
+    Ok(Err(e)) => {
+      Err(anyhow!("[{}] DTLS handshake failed: {}", thread_name, e))
+    }
     Err(_) => Err(anyhow!(
       "[{}] DTLS handshake timed out after 10s - \
       server is not responding or TURN relay is not forwarding",

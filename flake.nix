@@ -18,8 +18,12 @@
         cargo = fromTOML (builtins.readFile ./Cargo.toml);
         version = cargo.workspace.package.version;
 
+        rustNightly = pkgs.rust-bin.nightly.latest.default.override {
+          extensions = [ "rustfmt" ];
+        };
+
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" "rustfmt" "clippy" ];
+          extensions = [ "rust-src" "rust-analyzer" "clippy" ];
         };
 
         makePkg = path: pkgs.callPackage path {
@@ -35,6 +39,7 @@
           devShells.default = pkgs.mkShell {
             buildInputs = with pkgs; [
               rustToolchain
+              rustNightly
               pkg-config
               openssl
               stdenv.cc.cc.lib

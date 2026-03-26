@@ -1,2 +1,2 @@
-pub mod proxy;
 pub mod configuration;
+pub mod proxy;

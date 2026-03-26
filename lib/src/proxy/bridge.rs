@@ -1,12 +1,12 @@
-use std::{net::SocketAddr, sync::Arc};
-use std::time::Duration;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
+
 use anyhow::Result;
-use tokio::{sync::RwLock, task::JoinHandle};
-use tokio_util::sync::CancellationToken;
-use webrtc_util::Conn;
 use futures_util::future::select_all;
-use tokio::time::timeout;
+use tokio::{sync::RwLock, task::JoinHandle, time::timeout};
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
+use webrtc_util::Conn;
+
 use crate::proxy::flow::proxy_flow;
 
 pub struct ProxyBridge
@@ -27,7 +27,7 @@ impl ProxyBridge
     local_conn: Arc<dyn Conn + Send + Sync>,
     remote_conn: Arc<dyn Conn + Send + Sync>,
     client_addr_cache: Option<Arc<RwLock<Option<SocketAddr>>>>,
-    idle_timeout: Option<Duration>
+    idle_timeout: Option<Duration>,
   ) -> Self
   {
     Self {
@@ -36,7 +36,7 @@ impl ProxyBridge
       local_conn,
       remote_conn,
       client_addr_cache,
-      idle_timeout
+      idle_timeout,
     }
   }
 
@@ -79,7 +79,7 @@ impl ProxyBridge
     }
 
     let _ = timeout(Duration::from_secs(2), self.local_conn.close()).await;
-    
+
     info!("Connections has been closed for bridge {}", self.flow_name);
 
     Ok(())
@@ -91,12 +91,13 @@ impl ProxyBridge
     let cancellation_token = self.cancellation_token.clone();
     let local_conn = self.local_conn.clone();
     let remote_conn = self.remote_conn.clone();
-    let local_addr = local_conn.remote_addr().unwrap_or(local_conn.local_addr()?);
+    let local_addr =
+      local_conn.remote_addr().unwrap_or(local_conn.local_addr()?);
     let remote_addr = remote_conn
       .remote_addr()
       .unwrap_or(remote_conn.local_addr()?);
     let client_addr_cache = self.client_addr_cache.clone();
-    let idle_timeout = self.idle_timeout.clone();
+    let idle_timeout = self.idle_timeout;
 
     Ok(proxy_flow(
       flow_name,
@@ -107,7 +108,7 @@ impl ProxyBridge
       remote_conn,
       client_addr_cache,
       None,
-      idle_timeout
+      idle_timeout,
     ))
   }
 
@@ -117,12 +118,13 @@ impl ProxyBridge
     let cancellation_token = self.cancellation_token.clone();
     let local_conn = self.local_conn.clone();
     let remote_conn = self.remote_conn.clone();
-    let local_addr = local_conn.remote_addr().unwrap_or(local_conn.local_addr()?);
+    let local_addr =
+      local_conn.remote_addr().unwrap_or(local_conn.local_addr()?);
     let remote_addr = remote_conn
       .remote_addr()
       .unwrap_or(remote_conn.local_addr()?);
     let client_addr_cache = self.client_addr_cache.clone();
-    let idle_timeout = self.idle_timeout.clone();
+    let idle_timeout = self.idle_timeout;
 
     Ok(proxy_flow(
       flow_name,
@@ -133,7 +135,7 @@ impl ProxyBridge
       local_conn,
       None,
       client_addr_cache,
-      idle_timeout
+      idle_timeout,
     ))
   }
 }

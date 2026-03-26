@@ -4,7 +4,10 @@ use anyhow::Result;
 use reqwest::{Client, dns::Resolve, header::USER_AGENT};
 
 /// Создаётся клиент с определённым DNS-резолвером и IP интерфейсом
-pub fn create_client(addr_interface: IpAddr, resolver: Arc<dyn Resolve>) -> Result<Client>
+pub fn create_client(
+  addr_interface: IpAddr,
+  resolver: Arc<dyn Resolve>,
+) -> Result<Client>
 {
   let builder = reqwest::ClientBuilder::new()
     .no_proxy()

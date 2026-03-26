@@ -41,39 +41,39 @@ pub fn init_config() -> Result<AppConfiguration>
     config.common.peer_addr = peer;
   }
 
-  if let Some(provider_type) = args.provider_type {
-    if !matches!(provider_type, ProviderType::FromConfigFile) {
-      let common = args.provider_common.unwrap_or_default();
+  if let Some(provider_type) = args.provider_type
+    && !matches!(provider_type, ProviderType::FromConfigFile)
+  {
+    let common = args.provider_common.unwrap_or_default();
 
-      let details = match provider_type {
-        ProviderType::Direct => ProviderDetails::Direct,
-        ProviderType::Default { kind, link } => {
-          ProviderDetails::Default { kind, link }
-        }
-        ProviderType::Custom {
-          username,
-          password,
-          turn_address,
-          stun_address,
-          realm,
-        } => ProviderDetails::Custom {
-          username,
-          password,
-          turn_address,
-          stun_address,
-          realm,
-        },
-        _ => unreachable!(),
-      };
+    let details = match provider_type {
+      ProviderType::Direct => ProviderDetails::Direct,
+      ProviderType::Default { kind, link } => {
+        ProviderDetails::Default { kind, link }
+      }
+      ProviderType::Custom {
+        username,
+        password,
+        turn_address,
+        stun_address,
+        realm,
+      } => ProviderDetails::Custom {
+        username,
+        password,
+        turn_address,
+        stun_address,
+        realm,
+      },
+      _ => unreachable!(),
+    };
 
-      config.providers = vec![ProviderConfiguration {
-        priority: Some(0),
-        using_udp: common.using_udp,
-        using_dtls_obfuscation: common.using_dtls_obfuscation,
-        details,
-        threads: common.threads.map(|t| t as usize),
-      }];
-    }
+    config.providers = vec![ProviderConfiguration {
+      priority: Some(0),
+      using_udp: common.using_udp,
+      using_dtls_obfuscation: common.using_dtls_obfuscation,
+      details,
+      threads: common.threads.map(|t| t as usize),
+    }];
   }
 
   for provider in &mut config.providers {

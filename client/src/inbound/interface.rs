@@ -42,5 +42,5 @@ pub async fn get_current_interface() -> Result<IpAddr>
     ip.unwrap_or_else(|| "Not found".parse().unwrap())
   );
 
-  Ok(ip.ok_or_else(|| anyhow!("Unexpected error on ip interface getting"))?)
+  ip.ok_or_else(|| anyhow!("Unexpected error on ip interface getting"))
 }

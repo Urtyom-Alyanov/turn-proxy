@@ -4,8 +4,8 @@ use anyhow::{Context, Result};
 use tokio::net::UdpSocket;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error};
-use webrtc_util::Conn;
 use turn_proxy_lib::proxy::run_proxy_bridge;
+use webrtc_util::Conn;
 
 pub async fn handle_encrypted_udp_connection(
   dtls_conn: Arc<dyn Conn + Send + Sync>,
@@ -48,6 +48,7 @@ pub async fn handle_encrypted_udp_connection(
     Some(idle_timeout),
     dtls_conn,
     socket_arc,
-    false
-  ).await
+    false,
+  )
+  .await
 }

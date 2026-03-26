@@ -53,8 +53,7 @@ pub async fn get_vk_calls_turn_credentials(
       let token_without_payload = get_anonymous_token(&client, None).await?;
       let payload = get_call_payload(&client, token_without_payload).await?;
       let access_token = get_anonymous_token(&client, payload.into()).await?;
-      let call_token =
-        get_call_token(&client, access_token, anonymous.into()).await?;
+      let call_token = get_call_token(&client, access_token, anonymous).await?;
       Ok::<_>(call_token)
     },
     get_okcdn_anonymous_token(&client)

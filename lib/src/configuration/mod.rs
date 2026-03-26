@@ -1,1 +1,1 @@
-﻿pub mod common_section;
+pub mod common_section;

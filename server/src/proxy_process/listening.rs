@@ -1,9 +1,8 @@
-use std::{net::SocketAddr, time::Duration};
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
+
 use anyhow::{Context, Result};
 use dtls::{config::Config as DtlsConfig, listener::listen};
-use tokio::sync::Semaphore;
-use tokio::task::JoinSet;
+use tokio::{sync::Semaphore, task::JoinSet};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use webrtc_util::conn::Listener;
@@ -13,7 +12,8 @@ use crate::{
   proxy_process::handle_encrypted_udp_connection::handle_encrypted_udp_connection,
 };
 
-pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
+pub async fn listening(config: AppConfig, dtls_config: DtlsConfig)
+-> Result<()>
 {
   let listen_addr: SocketAddr = config
     .common
@@ -35,11 +35,9 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
   let cancel_token = CancellationToken::new();
   let mut cancel_set = JoinSet::new();
 
-  let semaphore = Arc::new(
-    Semaphore::new(
-      config.common.max_connections.unwrap_or(2000)
-    )
-  );
+  let semaphore = Arc::new(Semaphore::new(
+    config.common.max_connections.unwrap_or(2000),
+  ));
 
   let ct = cancel_token.clone();
   tokio::spawn(async move {
@@ -72,7 +70,7 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
 
         if let Ok(permit) = semaphore_permit {
           let ct_inner = cancel_token.clone();
-          let proxy_addr = proxy_addr.clone();
+          // let proxy_addr = proxy_addr;
 
           cancel_set.spawn(async move {
             info!("Connection from: {}", remote_addr);
@@ -104,7 +102,7 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
 
   info!("Waiting for all tasks to finish...");
   let _ = tokio::time::timeout(Duration::from_secs(3), async {
-    while let Some(_) = cancel_set.join_next().await {}
+    while cancel_set.join_next().await.is_some() {}
   })
   .await;
 

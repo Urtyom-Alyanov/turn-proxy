@@ -1,0 +1,82 @@
+name: Checks
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+    branches: ["main", "master"]
+
+permissions:
+  contents: read
+
+jobs:
+  code-test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install Nightly Rustfmt
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check Format
+        run: cargo +nightly fmt --all -- --check
+
+      - name: Run Tests
+        run: cargo test --all-targets --all-features
+
+      - name: Clippy
+        run: cargo clippy --all-targets
+
+  build-test:
+    name: Build test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: |
+          cargo build -p turn-proxy-server
+          cargo build -p turn-proxy-client
+
+  nix-build:
+    name: Nix Build test (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: determinatesystems/nix-installer-action@v12
+
+      - name: Nix Magic Cache
+        uses: determinatesystems/magic-nix-cache-action@v8
+
+      - name: Check Nix Flake
+        run: nix flake check
+
+      - name: Build with Nix
+        run: |
+          nix build .#client
+          nix build .#server
