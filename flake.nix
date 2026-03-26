@@ -21,7 +21,7 @@
 
         turn-proxy-pkg = pkgs.rustPlatform.buildRustPackage {
           pname = "turn-proxy-server";
-          version = "1.0.9";
+          version = "1.0.10";
           src = ./.;
 
           cargoLock = {

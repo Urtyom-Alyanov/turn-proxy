@@ -1,5 +1,5 @@
-use std::{net::SocketAddr, sync::Arc};
-use std::time::Duration;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
+
 use anyhow::Result;
 use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
@@ -24,14 +24,13 @@ pub fn proxy_flow(
 ) -> JoinHandle<Result<()>>
 {
   tokio::spawn(async move {
-    let mut buf = [0u8; 4096];
+    let mut buf = [0u8; 2048];
 
     let recv_result = if let Some(t) = idle_timeout {
       tokio::time::timeout(t, from_flow.recv_from(&mut buf)).await
     } else {
       Ok(from_flow.recv_from(&mut buf).await)
     };
-
 
     loop {
       match recv_result {
