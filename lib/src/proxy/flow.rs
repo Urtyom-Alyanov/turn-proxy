@@ -44,7 +44,7 @@ pub fn proxy_flow(
       };
 
       match recv_result {
-        Ok(Ok((n, src))) if n > 0 => {
+        Ok((n, src)) if n > 0 => {
           if let Some(cache) = &from_cache {
             *cache.write().await = Some(src);
           }
