@@ -1,10 +1,10 @@
 [Unit]
-Description=DTLS TURN Proxy Server
+Description=DTLS TURN Proxy Client
 After=network.target
-Documentation=https://github.com/Urtyom-Alyanov/turn-proxy-proxy
+Documentation=https://github.com/Urtyom-Alyanov/turn-proxy
 
 [Service]
-ExecStart=/usr/bin/turn-proxy-client --config /etc/turn-proxy/server/config.toml
+ExecStart=/usr/bin/turn-proxy-client --config /etc/turn-proxy/client/config.toml from-config-file
 
 Restart=always
 RestartSec=5

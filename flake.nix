@@ -15,25 +15,23 @@
           inherit system overlays;
         };
 
+        cargo = fromTOML (builtins.readFile ./Cargo.toml);
+        version = cargo.workspace.package.version;
+
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" "rustfmt" "clippy" ];
         };
 
-        turn-proxy-pkg = pkgs.rustPlatform.buildRustPackage {
-          pname = "turn-proxy-server";
-          version = "1.0.11";
-          src = ./.;
-
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-          };
-
-          nativeBuildInputs = [ pkgs.pkg-config ];
-          buildInputs = [ pkgs.openssl ];
-        };
+        makePkg = path: pkgs.callPackage path {
+                  lib = pkgs.lib;
+                  inherit version;
+                };
       in
         {
-          packages.default = turn-proxy-pkg;
+          packages = {
+            server = makePkg ./server/nix/package.nix;
+            client = makePkg ./client/nix/package.nix;
+          };
           devShells.default = pkgs.mkShell {
             buildInputs = with pkgs; [
               rustToolchain
@@ -41,54 +39,18 @@
               openssl
               stdenv.cc.cc.lib
             ];
-          };
 
-          shellHook = ''
-            export RUST_SRC_PATH="${rustToolchain}/lib/rustlib/src/rust/library"
-          '';
+            shellHook = ''
+              export RUST_SRC_PATH="${rustToolchain}/lib/rustlib/src/rust/library"
+            '';
+          };
         }
     ) // {
-      nixosModules.default = { config, lib, pkgs, ... }:
-       let
-         cfg = config.services.turn-proxy;
-       in
-       {
-        options.services.turn-proxy-server = {
-          enable = lib.mkEnableOption "DTLS Turn Proxy Server";
-          package = lib.mkOption {
-            type = lib.types.package;
-            default = self.packages.${pkgs.system}.default;
-            description = "Package with turn proxy";
-          };
-          configPath = lib.mkOption {
-            type = lib.types.path;
-            default = "/etc/turn-proxy/server/config.toml";
-            description = "Path to config.toml if it using";
-          };
-          config = {
-            listeningOn = lib.mkOption {
-              type = lib.types.str;
-              default = "0.0.0.0:56000";
-              description = "Address to listening";
-            };
-            proxyInto = lib.mkOption {
-              type = lib.types.str;
-              description = "Address of UDP-based application";
-            };
-          };
-        };
-
-        config = lib.mkIf cfg.enable {
-          systemd.services.turn-proxy-server = {
-            description = "DTLS TURN Proxy Server";
-            after = [ "network.target" ];
-            wantedBy = [ "multi-user.target" ];
-            serviceConfig = {
-              ExecStart = "${cfg.package}/bin/turn-proxy-server ${if cfg.configPath then "--config=${cfg.configPath}" else "--no-config"} --listening-on=${cfg.config.listeningOn} --proxy-into=${cfg.config.proxyInto}";
-              Restart = "always";
-              LimitNOFILE = 65535;
-            };
-          };
+      nixosModules = {
+        server = import ./server/nix/module.nix self;
+        client = import ./client/nix/module.nix self;
+        default = { ... }: {
+          imports = [ self.nixosModules.server self.nixosModules.client ];
         };
       };
     };

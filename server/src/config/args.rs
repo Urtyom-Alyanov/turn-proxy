@@ -15,7 +15,7 @@ pub struct Args
   #[arg(long, short)]
   pub proxy_into: Option<String>,
 
-  #[arg(long, short)]
+  #[arg(long, short = 'N')]
   pub no_config: bool,
 
   #[arg(long, short, default_value = DEFAULT_CONFIG_PATH)]
