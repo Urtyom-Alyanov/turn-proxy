@@ -28,6 +28,11 @@ jobs:
       - name: Check Format
         run: cargo +nightly fmt --all -- --check
 
+      - name: Build
+        run: |
+          cargo build -p turn-proxy-server
+          cargo build -p turn-proxy-client
+
       - name: Run Tests
         run: cargo test --all-targets --all-features
 
