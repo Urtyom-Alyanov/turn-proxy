@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/
 COPY --from=builder /usr/src/turn-proxy/target/release/turn-proxy-server /usr/local/bin/turn-proxy-server
 RUN mkdir -p /etc/turn-proxy/server/
 
-EXPOSE 56000/udp
+EXPOSE 56040/udp
 
 ENTRYPOINT ["turn-proxy-server"]
 CMD ["--config", "/etc/turn-proxy/server/config.toml"]
