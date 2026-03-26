@@ -46,8 +46,8 @@ pub async fn handle_encrypted_udp_connection(
     "SERVER".to_owned(),
     token,
     Some(idle_timeout),
-    dtls_conn,
     socket_arc,
+    dtls_conn,
     false
   ).await
 }
