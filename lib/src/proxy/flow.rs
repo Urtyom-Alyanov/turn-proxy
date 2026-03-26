@@ -26,17 +26,27 @@ pub fn proxy_flow(
   tokio::spawn(async move {
     let mut buf = [0u8; 2048];
 
-    let recv_result = if let Some(t) = idle_timeout {
-      tokio::time::timeout(t, from_flow.recv_from(&mut buf)).await
-    } else {
-      Ok(from_flow.recv_from(&mut buf).await)
-    };
-
     loop {
+      if cancellation_token.is_cancelled() {
+        break;
+      }
+
+      let recv_result = if let Some(t) = idle_timeout {
+        match tokio::time::timeout(t, from_flow.recv_from(&mut buf)).await {
+          Ok(res) => res,
+          Err(_) => {
+            debug!("[{}] Idle timeout reached ({}s)", flow_name, t.as_secs());
+            break;
+          }
+        }
+      } else {
+        from_flow.recv_from(&mut buf).await
+      };
+
       match recv_result {
         Ok(Ok((n, src))) if n > 0 => {
           if let Some(cache) = &from_cache {
-            cache.write().await.replace(src);
+            *cache.write().await = Some(src);
           }
 
           debug!("[{}] Received {} bytes from {}", flow_name, n, src);
@@ -72,6 +82,7 @@ pub fn proxy_flow(
     }
 
     cancellation_token.cancel();
+    debug!("[{}] Flow stopped", flow_name);
     Ok(())
   })
 }
