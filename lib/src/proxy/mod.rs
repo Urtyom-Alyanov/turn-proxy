@@ -26,7 +26,7 @@ pub async fn run_proxy_bridge(
 
   let bridge = ProxyBridge::new(
     flow_name,
-    token.clone(),
+    token,
     first_conn,
     last_conn,
     cache_addr,
