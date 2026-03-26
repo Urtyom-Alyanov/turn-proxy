@@ -72,15 +72,15 @@ impl ProxyBridge
 
     info!("Shutting down bridge {} connections...", self.flow_name);
 
-    let remote_close = self.remote_conn.close();
-    match timeout(Duration::from_secs(3), remote_close).await {
+    match timeout(Duration::from_secs(3), self.remote_conn.close()).await {
       Ok(Ok(_)) => debug!("Remote connection closed cleanly"),
       Ok(Err(e)) => warn!("Remote connection close error: {}", e),
       Err(_) => warn!("Remote connection close timed out"),
     }
 
-    let local_close = self.local_conn.close();
-    let _ = timeout(Duration::from_secs(1), local_close).await;
+    let _ = timeout(Duration::from_secs(2), self.local_conn.close()).await;
+    
+    info!("Connections has been closed for bridge {}", self.flow_name);
 
     Ok(())
   }

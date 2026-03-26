@@ -31,12 +31,18 @@ pub fn init_config() -> Result<AppConfig>
   let final_proxy = args
     .proxy_into
     .or(config.common.proxy_into)
-    .context("proxy_into address is missing")?;
+    .context("`proxy_into` address is missing")?;
+  
+  let max_connections = args
+    .max_connections
+    .or(config.common.max_connections)
+    .context("`max_connections` is missing")?;
 
   Ok(AppConfig {
     common: CommonConfig {
       listening_on: final_listen.into(),
       proxy_into: final_proxy.into(),
+      max_connections: max_connections.into()
     },
   })
 }

@@ -1,10 +1,11 @@
 use std::{net::SocketAddr, time::Duration};
-
+use std::sync::Arc;
 use anyhow::{Context, Result};
 use dtls::{config::Config as DtlsConfig, listener::listen};
+use tokio::sync::Semaphore;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use webrtc_util::conn::Listener;
 
 use crate::{
@@ -34,6 +35,12 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
   let cancel_token = CancellationToken::new();
   let mut cancel_set = JoinSet::new();
 
+  let semaphore = Arc::new(
+    Semaphore::new(
+      config.common.max_connections.unwrap_or(2000)
+    )
+  );
+
   let ct = cancel_token.clone();
   tokio::spawn(async move {
     tokio::signal::ctrl_c().await.ok();
@@ -46,6 +53,11 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
   loop {
     tokio::select! {
       _ = cancel_token.cancelled() => break,
+      res = cancel_set.join_next(), if !cancel_set.is_empty() => {
+        if let Some(Err(e)) = res {
+          error!("Task panicked or failed: {:?}", e);
+        }
+      },
       conn_result = listener.accept() => {
         let (conn, remote_addr): (_, _) = match conn_result {
           Ok(res) => res,
@@ -56,27 +68,36 @@ pub async fn listening(config: AppConfig, dtls_config: DtlsConfig) -> Result<()>
           }
         };
 
-        let ct_inner = cancel_token.clone();
-        let proxy_addr = proxy_addr.clone();
+        let semaphore_permit = semaphore.clone().try_acquire_owned();
 
-        cancel_set.spawn(async move {
-          info!("Connection from: {}", remote_addr);
+        if let Ok(permit) = semaphore_permit {
+          let ct_inner = cancel_token.clone();
+          let proxy_addr = proxy_addr.clone();
 
-          let conn_for_shutdown = conn.clone();
+          cancel_set.spawn(async move {
+            info!("Connection from: {}", remote_addr);
 
-          tokio::select! {
-            _ = ct_inner.cancelled() => {
-              let _ = conn_for_shutdown.close().await;
-            }
-            res = handle_encrypted_udp_connection(conn, proxy_addr) => {
-              if let Err(e) = res {
-                warn!("Error handling connection to {}: {}", remote_addr, e);
+            let _permit = permit;
+
+            let conn_for_shutdown = conn.clone();
+
+            tokio::select! {
+              _ = ct_inner.cancelled() => {
+                let _ = conn_for_shutdown.close().await;
+              }
+              res = handle_encrypted_udp_connection(conn, proxy_addr) => {
+                if let Err(e) = res {
+                  warn!("Error handling connection to {}: {}", remote_addr, e);
+                }
               }
             }
-          }
 
-          info!("Connection closed: {}", remote_addr);
-        });
+            info!("Connection closed: {}", remote_addr);
+          });
+        } else {
+          warn!("Max connections reached, dropping connection from {}", remote_addr);
+          let _ = conn.close().await;
+        }
       }
     }
   }

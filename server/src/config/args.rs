@@ -20,4 +20,7 @@ pub struct Args
 
   #[arg(long, short, default_value = DEFAULT_CONFIG_PATH)]
   pub config: String,
+
+  #[arg(long, short = 'n')]
+  pub max_connections: Option<usize>,
 }

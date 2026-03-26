@@ -12,4 +12,5 @@ pub struct CommonConfig
 {
   pub listening_on: Option<String>,
   pub proxy_into: Option<String>,
+  pub max_connections: Option<usize>,
 }
