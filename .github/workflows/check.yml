@@ -11,21 +11,16 @@ permissions:
 
 jobs:
   code-test:
-    name: Test and Lint
+    name: Build test, Test and Lint on ubuntu-latest
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
-      - name: Install Nightly Rustfmt
+      - name: Install Nightly Rust
         uses: dtolnay/rust-toolchain@nightly
         with:
-          components: rustfmt
+          components: rustfmt clippy
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
@@ -40,11 +35,8 @@ jobs:
         run: cargo clippy --all-targets
 
   build-test:
-    name: Build test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest]
+    name: Build test on Windows
+    runs-on: windows-latest
 
     steps:
       - name: Checkout code
