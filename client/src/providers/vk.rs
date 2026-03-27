@@ -21,7 +21,7 @@ const VK_CLIENT_SECRET: &str = "QbYic1K3lEV5kTGiqlq2";
 const VK_CLIENT_ID: &str = "6287487";
 const OKCDN_APPLICATION_KEY: &str = "CGMMEJLGDIHBABABA";
 const VK_REALM: &str = "vk";
-const VK_API_VERSION: &str = "5.264";
+const VK_API_VERSION: &str = "5.274";
 
 pub fn get_vk_call_id_from_link(link: &str) -> Result<&str>
 {
@@ -43,16 +43,14 @@ pub async fn get_vk_calls_turn_credentials(
 {
   let client = create_inbound_client(interface).await?;
 
-  let anonymous = CallTokenCredentials {
+  let anonymous: CallTokenCredentials = CallTokenCredentials {
     call_id: call_id.clone(),
     name: with_name.unwrap_or("Гость".to_owned()),
   };
 
   let (call_token, okcdn_token) = tokio::join!(
     async {
-      let token_without_payload = get_anonymous_token(&client, None).await?;
-      let payload = get_call_payload(&client, token_without_payload).await?;
-      let access_token = get_anonymous_token(&client, payload.into()).await?;
+      let access_token = get_anonymous_token(&client).await?;
       let call_token = get_call_token(&client, access_token, anonymous).await?;
       Ok::<_>(call_token)
     },
@@ -68,39 +66,35 @@ pub async fn get_vk_calls_turn_credentials(
   )
 }
 
-/// Позволяет получить анонимный токен пользователя ВКонтакте. Есть два разных
-/// случая:
-///
-/// 1. Без `call_payload`, получает стандартный токен.
-/// 2. С `call_payload`, с которым можно уже войти в звонок.
+/// Позволяет получить анонимный токен пользователя ВКонтакте.
 async fn get_anonymous_token(
   client: &Client,
-  call_payload: Option<String>,
 ) -> Result<String>
 {
   let url = "https://login.vk.ru/?act=get_anonym_token";
 
-  let mut body = HashMap::from([
+  let body = HashMap::from([
+    ("app_id".to_owned(), VK_CLIENT_ID.to_owned()),
     ("client_id".to_owned(), VK_CLIENT_ID.to_owned()),
     ("client_secret".to_owned(), VK_CLIENT_SECRET.to_owned()),
-    ("app_id".to_owned(), VK_CLIENT_ID.to_owned()),
+    ("token_type".to_owned(), "messages".to_owned()),
     ("version".to_owned(), "1".to_owned()),
   ]);
 
-  if let Some(payload) = call_payload {
-    body.insert("payload".to_owned(), payload);
-    body.insert("token_type".to_owned(), "messages".to_owned());
-  } else {
-    body.insert(
-      "scopes".to_owned(),
-      "audio_anonymous,video_anonymous,photos_anonymous,profile_anonymous"
-        .to_owned(),
-    );
-    body.insert("isApiOauthAnonymEnabled".to_owned(), "false".to_owned());
-  }
+  // if let Some(payload) = call_payload {
+  //   body.insert("payload".to_owned(), payload);
+  //   body.insert("token_type".to_owned(), "messages".to_owned());
+  // } else {
+  //   body.insert(
+  //     "scopes".to_owned(),
+  //     "audio_anonymous,video_anonymous,photos_anonymous,profile_anonymous"
+  //       .to_owned(),
+  //   );
+  //   body.insert("isApiOauthAnonymEnabled".to_owned(), "false".to_owned());
+  // }
 
   info!("Getting VK anonym token...");
-  info!("With this payload: {:?}", body);
+  // info!("With this payload: {:?}", body);
 
   let resp = client
     .post(url)
@@ -118,36 +112,36 @@ async fn get_anonymous_token(
 }
 
 /// Позволяет получить `call_payload` для токена
-async fn get_call_payload(
-  client: &Client,
-  access_token: String,
-) -> Result<String>
-{
-  let url = "https://api.vk.ru/method/calls.getAnonymousAccessTokenPayload";
+// async fn get_call_payload(
+//   client: &Client,
+//   access_token: String,
+// ) -> Result<String>
+// {
+//   let url = "https://api.vk.ru/method/calls.getAnonymousAccessTokenPayload";
 
-  info!("Getting call payload...");
+//   info!("Getting call payload...");
 
-  let body = vec![
-    ("client_id", VK_CLIENT_ID.to_owned()),
-    ("v", VK_API_VERSION.to_owned()),
-    ("access_token", access_token),
-  ];
+//   let body = vec![
+//     ("client_id", VK_CLIENT_ID.to_owned()),
+//     ("v", VK_API_VERSION.to_owned()),
+//     ("access_token", access_token),
+//   ];
 
-  let resp = client
-    .post(url)
-    .form(&body)
-    .send()
-    .await?
-    .json::<Value>()
-    .await?;
+//   let resp = client
+//     .post(url)
+//     .form(&body)
+//     .send()
+//     .await?
+//     .json::<Value>()
+//     .await?;
 
-  Ok(
-    resp["response"]["payload"]
-      .as_str()
-      .ok_or_else(|| anyhow!("Failed to get call payload from response"))?
-      .to_owned(),
-  )
-}
+//   Ok(
+//     resp["response"]["payload"]
+//       .as_str()
+//       .ok_or_else(|| anyhow!("Failed to get call payload from response"))?
+//       .to_owned(),
+//   )
+// }
 
 /// Позволяет получить ключ для подключения к звонку (`call_token`)
 async fn get_call_token(
