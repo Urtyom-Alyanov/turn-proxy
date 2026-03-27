@@ -1,4 +1,4 @@
-{ pkgs, version, lib }:
+{ version, lib }:
 let
   src = lib.cleanSourceWith {
     src = ../..;

@@ -8,16 +8,22 @@
 
 ## Развёртка
 
+### Windows
+
+Для ОС Windows можно скачать во вкладке ["релизы"](https://github.com/Urtyom-Alyanov/turn-proxy/releases/latest).
+
+### Linux-based
+
 На данный момент доступны [`flake.nix`](./flake.nix) для пакетного менеджера Nix вместе с модулем для NixOS, а также
 [`PKGBUILD`](./PKGBUILD) для Arch Linux
 
-### Быстрая установка (Debian/Ubuntu/Fedora/и производные)
+#### Быстрая установка (Debian/Ubuntu/Fedora/и производные)
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/Urtyom-Alyanov/turn-proxy-server/master/install-server.sh | bash
 ```
 
-#### Минимальные требования
+##### Минимальные требования
 
 - Ubuntu 21.10 (или 22.04 LTS)
 - Debian 12 (Bookworm)
@@ -26,7 +32,7 @@ curl -sSL https://raw.githubusercontent.com/Urtyom-Alyanov/turn-proxy-server/mas
 
 Проще говоря, нужна минимальная версия glibc: `2.27`
 
-### NixOS
+#### NixOS
 
 Для наилучшей операционной системы модно, можно и надо использовать модули, а если быть точнее, то модуль который
 можно импортировать с помощью [`flake.nix`](../flake.nix). Также его декларация находится здесь: [`nix/module.nix`](./nix/module.nix)
@@ -46,7 +52,7 @@ curl -sSL https://raw.githubusercontent.com/Urtyom-Alyanov/turn-proxy-server/mas
 }
 ```
 
-### Для Arch Linux (PKGBUILD)
+#### Для Arch Linux (PKGBUILD)
 
 ```shell
 # Когда опубликуется на AUR
@@ -60,7 +66,7 @@ cd turn-proxy-server
 makepkg -si
 ```
 
-### Dockerfile
+#### Dockerfile
 
 Также есть [Dockerfile](./Dockerfile), но сам пакет не опубликован на Dockerhub, делайте с ним что хотите.
 

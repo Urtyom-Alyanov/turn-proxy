@@ -68,4 +68,3 @@ graph LR
 
 _Сервер лицензирован под [AGPL-v3](./LICENSE.server)_
 _Клиент лицензирован под [MPL-v2](./LICENSE.client)_
-
