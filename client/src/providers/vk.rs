@@ -67,9 +67,7 @@ pub async fn get_vk_calls_turn_credentials(
 }
 
 /// Позволяет получить анонимный токен пользователя ВКонтакте.
-async fn get_anonymous_token(
-  client: &Client,
-) -> Result<String>
+async fn get_anonymous_token(client: &Client) -> Result<String>
 {
   let url = "https://login.vk.ru/?act=get_anonym_token";
 
