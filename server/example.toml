@@ -1,3 +1,4 @@
 [common]
 listening_on = "0.0.0.0:56040"
 proxy_into = "127.0.0.1:51820"
+max_connections = 2000
