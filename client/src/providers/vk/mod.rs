@@ -1,10 +1,10 @@
-pub mod datatypes;
 pub mod captcha_solve;
+pub mod datatypes;
 mod vk_api;
 
 use std::{collections::HashMap, net::IpAddr};
 
-use anyhow::{Context, Result, anyhow, Ok};
+use anyhow::{Context, Ok, Result, anyhow};
 use reqwest::Client;
 use serde_json::Value;
 use tracing::info;
@@ -12,10 +12,9 @@ use uuid::Uuid;
 
 use crate::{
   inbound::create_inbound_client,
+  providers::vk::{datatypes::CaptchaError, vk_api::vk_api_request},
   proxy_process::turn_configure::TurnCredentials,
 };
-use crate::providers::vk::datatypes::CaptchaError;
-use crate::providers::vk::vk_api::vk_api_request;
 
 struct CallTokenCredentials
 {
@@ -155,7 +154,7 @@ async fn get_call_token(
 ) -> Result<String>
 {
   let join_link = format!("https://vk.com/call/join/{}", credentials.call_id);
-  
+
   let resp = vk_api_request(
     client,
     "calls.getAnonymousToken",
@@ -163,11 +162,15 @@ async fn get_call_token(
     HashMap::from([
       ("name".to_owned(), credentials.name),
       ("vk_join_link".to_owned(), join_link),
-    ])
-  ).await?;
-  
+    ]),
+  )
+  .await?;
+
   Ok(
-    resp["token"].as_str().ok_or_else(|| anyhow!("Failed to get token from response"))?.to_owned()
+    resp["token"]
+      .as_str()
+      .ok_or_else(|| anyhow!("Failed to get token from response"))?
+      .to_owned(),
   )
 }
 

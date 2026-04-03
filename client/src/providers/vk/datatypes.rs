@@ -1,13 +1,15 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RequestParam {
+pub struct RequestParam
+{
   pub key: String,
   pub value: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CaptchaError {
+pub struct CaptchaError
+{
   pub error_code: i32,
   pub error_message: String,
 
@@ -29,4 +31,3 @@ pub struct CaptchaError {
 
   pub request_params: Vec<RequestParam>,
 }
-

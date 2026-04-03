@@ -1,26 +1,30 @@
-﻿use axum::{
+use std::sync::Arc;
+
+use axum::{
+  Router,
   body::Body,
   extract::{OriginalUri, Query, State},
-  http::{header, HeaderMap, Method, Response, StatusCode},
+  http::{HeaderMap, Method, Response, StatusCode, header},
   response::{Html, IntoResponse},
   routing::{get, post},
-  Router,
 };
-use std::sync::Arc;
-use tokio::sync::{oneshot, Mutex};
-use tracing::{info};
+use tokio::sync::{Mutex, oneshot};
+use tracing::info;
 use url::Url;
+
 use crate::providers::vk::captcha_solve::PROXY_ADDR;
 
 const INJECT_SCRIPT: &str = include_str!("inject.html");
 
-pub struct ProxyContext {
+pub struct ProxyContext
+{
   pub target_url: Url,
   pub token_tx: Mutex<Option<oneshot::Sender<String>>>,
   pub http_client: reqwest::Client,
 }
 
-pub async fn run_proxy_server(ctx: Arc<ProxyContext>) -> anyhow::Result<()> {
+pub async fn run_proxy_server(ctx: Arc<ProxyContext>) -> anyhow::Result<()>
+{
   let app = Router::new()
     .route("/", get(proxy_handler).post(proxy_handler))
     .route("/local-captcha-result", post(captcha_result_handler))
@@ -40,8 +44,9 @@ async fn proxy_handler(
   method: Method,
   headers: HeaderMap,
   OriginalUri(uri): OriginalUri,
-  body: Body
-) -> impl IntoResponse {
+  body: Body,
+) -> impl IntoResponse
+{
   let mut target = ctx.target_url.clone();
   if uri.path() != "/" {
     target.set_path(uri.path());
@@ -51,7 +56,9 @@ async fn proxy_handler(
   let mut req_builder = ctx.http_client.request(method, target.as_str());
 
   for (key, value) in headers.iter() {
-    if key == header::HOST { continue; }
+    if key == header::HOST {
+      continue;
+    }
     req_builder = req_builder.header(key, value);
   }
 
@@ -71,20 +78,28 @@ async fn proxy_handler(
   if status.is_redirection() {
     if let Some(loc_val) = res_headers.get_mut(header::LOCATION) {
       if let Ok(loc_str) = loc_val.to_str() {
-        let target_origin = format!("{}://{}", ctx.target_url.scheme(), ctx.target_url.host_str().unwrap_or(""));
-        let new_loc = loc_str.replace(&target_origin, &format!("http://{}", PROXY_ADDR));
-        *loc_val = header::HeaderValue::from_str(&new_loc).unwrap_or(loc_val.clone());
+        let target_origin = format!(
+          "{}://{}",
+          ctx.target_url.scheme(),
+          ctx.target_url.host_str().unwrap_or("")
+        );
+        let new_loc =
+          loc_str.replace(&target_origin, &format!("http://{}", PROXY_ADDR));
+        *loc_val =
+          header::HeaderValue::from_str(&new_loc).unwrap_or(loc_val.clone());
       }
     }
   }
 
-  let content_type = res_headers.get(header::CONTENT_TYPE)
+  let content_type = res_headers
+    .get(header::CONTENT_TYPE)
     .and_then(|v| v.to_str().ok())
     .unwrap_or("");
 
   if content_type.contains("text/html") {
     let text = vk_resp.text().await.unwrap_or_default();
-    let modified_html = text.replace("</head>", &format!("{}{}", INJECT_SCRIPT, "</head>"));
+    let modified_html =
+      text.replace("</head>", &format!("{}{}", INJECT_SCRIPT, "</head>"));
 
     res_headers.remove(header::CONTENT_LENGTH);
     res_headers.remove(header::CONTENT_ENCODING); // Текст уже разжат reqwest-ом
@@ -105,9 +120,12 @@ async fn proxy_handler(
 async fn generic_proxy_handler(
   State(ctx): State<Arc<ProxyContext>>,
   Query(params): Query<std::collections::HashMap<String, String>>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+{
   let url = params.get("proxy_url").cloned().unwrap_or_default();
-  if url.is_empty() { return StatusCode::BAD_REQUEST.into_response(); }
+  if url.is_empty() {
+    return StatusCode::BAD_REQUEST.into_response();
+  }
 
   let resp = match ctx.http_client.get(url).send().await {
     Ok(r) => r,
@@ -118,18 +136,22 @@ async fn generic_proxy_handler(
   for (k, v) in resp.headers() {
     rb = rb.header(k, v);
   }
-  rb.body(Body::from(resp.bytes().await.unwrap_or_default())).unwrap().into_response()
+  rb.body(Body::from(resp.bytes().await.unwrap_or_default()))
+    .unwrap()
+    .into_response()
 }
 
 #[derive(serde::Deserialize)]
-struct TokenPayload {
+struct TokenPayload
+{
   token: String,
 }
 
 async fn captcha_result_handler(
   State(ctx): State<Arc<ProxyContext>>,
   axum::Json(payload): axum::Json<TokenPayload>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+{
   let mut guard = ctx.token_tx.lock().await;
   if let Some(tx) = guard.take() {
     let _ = tx.send(payload.token);

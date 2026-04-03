@@ -1,27 +1,35 @@
-﻿use std::sync::Arc;
-use axum::extract::{Query, State};
-use axum::response::{Html, IntoResponse};
-use axum::Router;
-use axum::routing::get;
+use std::sync::Arc;
+
+use axum::{
+  Router,
+  extract::{Query, State},
+  response::{Html, IntoResponse},
+  routing::get,
+};
 use serde::Deserialize;
 use tokio::sync::Mutex;
 use tracing::info;
+
 use crate::providers::vk::captcha_solve::IMAGE_SERVER_ADDR;
 
 const IMAGE_FORM: &str = include_str!("./image_captcha_form.html");
 
-
-pub struct ImageContext {
+pub struct ImageContext
+{
   pub captcha_img: String,
   pub result_tx: Mutex<Option<oneshot::Sender<String>>>,
 }
 
 #[derive(Deserialize)]
-pub struct SolveParams {
+pub struct SolveParams
+{
   pub key: String,
 }
 
-pub async fn solve_captcha_via_image(captcha_img: &str) -> anyhow::Result<String> {
+pub async fn solve_captcha_via_image(
+  captcha_img: &str,
+) -> anyhow::Result<String>
+{
   let (tx, rx) = oneshot::channel();
 
   let ctx = Arc::new(ImageContext {
@@ -47,7 +55,8 @@ pub async fn solve_captcha_via_image(captcha_img: &str) -> anyhow::Result<String
   Ok(key)
 }
 
-pub async fn run_image_server(ctx: Arc<ImageContext>) -> anyhow::Result<()> {
+pub async fn run_image_server(ctx: Arc<ImageContext>) -> anyhow::Result<()>
+{
   let app = Router::new()
     .route("/", get(show_form_handler))
     .route("/solve", get(solve_handler))
@@ -58,18 +67,24 @@ pub async fn run_image_server(ctx: Arc<ImageContext>) -> anyhow::Result<()> {
   Ok(())
 }
 
-async fn show_form_handler(State(ctx): State<Arc<ImageContext>>) -> impl IntoResponse {
+async fn show_form_handler(
+  State(ctx): State<Arc<ImageContext>>,
+) -> impl IntoResponse
+{
   Html(IMAGE_FORM.replace("{image}", &ctx.captcha_img))
 }
 
 async fn solve_handler(
   State(ctx): State<Arc<ImageContext>>,
   Query(params): Query<SolveParams>,
-) -> impl IntoResponse {
+) -> impl IntoResponse
+{
   let mut guard = ctx.result_tx.lock().await;
   if let Some(tx) = guard.take() {
     let _ = tx.send(params.key);
   }
 
-  Html("<h2>Готово! Возвращайтесь в консоль.</h2><script>setTimeout(window.close, 1000);</script>")
+  Html(
+    "<h2>Готово! Возвращайтесь в консоль.</h2><script>setTimeout(window.close, 1000);</script>",
+  )
 }

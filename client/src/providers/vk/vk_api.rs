@@ -1,8 +1,10 @@
-﻿use std::collections::HashMap;
-use anyhow::{anyhow,Result};
+use std::collections::HashMap;
+
+use anyhow::{Result, anyhow};
 use reqwest::Client;
 use serde_json::Value;
 use tracing::info;
+
 use crate::providers::vk::captcha_solve::solve_captcha;
 
 const VK_CLIENT_SECRET: &str = "QbYic1K3lEV5kTGiqlq2";
@@ -13,7 +15,7 @@ pub async fn vk_api_request(
   client: &Client,
   method: &str,
   access_token: &str,
-  method_body: HashMap<String, String>
+  method_body: HashMap<String, String>,
 ) -> Result<Value>
 {
   let method_url = format!("https://api.vk.ru/method/{}", method);
@@ -31,7 +33,8 @@ pub async fn vk_api_request(
     body.extend(captcha_params.clone());
     body.extend(method_body.clone());
 
-    let resp = client.post(&method_url)
+    let resp = client
+      .post(&method_url)
       .form(&body)
       .send()
       .await?
@@ -40,14 +43,20 @@ pub async fn vk_api_request(
 
     if let Some(error_object) = resp["error"].as_object() {
       let error_object_clone = error_object.clone();
-      captcha_params = solve_captcha(error_object_clone, attempt, max_attempts).await?;
+      captcha_params =
+        solve_captcha(error_object_clone, attempt, max_attempts).await?;
 
-      info!("Captcha solved, retrying request (attempt {})...", attempt + 1);
+      info!(
+        "Captcha solved, retrying request (attempt {})...",
+        attempt + 1
+      );
       continue;
     }
 
-    return Ok(resp["response"].clone())
+    return Ok(resp["response"].clone());
   }
 
-  Err(anyhow!("Failed to api request after maximum captcha retries"))
+  Err(anyhow!(
+    "Failed to api request after maximum captcha retries"
+  ))
 }

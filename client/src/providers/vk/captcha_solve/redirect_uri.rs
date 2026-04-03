@@ -1,11 +1,14 @@
-﻿use std::sync::Arc;
-use tokio::sync::{oneshot, Mutex};
-use tracing::info;
-use anyhow::Result;
-use url::Url;
-use crate::providers::vk::captcha_solve::{reverse_proxy, PROXY_ADDR};
+use std::sync::Arc;
 
-pub async fn solve_captcha_via_proxy(redirect_uri: &str) -> Result<String> {
+use anyhow::Result;
+use tokio::sync::{Mutex, oneshot};
+use tracing::info;
+use url::Url;
+
+use crate::providers::vk::captcha_solve::{PROXY_ADDR, reverse_proxy};
+
+pub async fn solve_captcha_via_proxy(redirect_uri: &str) -> Result<String>
+{
   let target_url = Url::parse(&redirect_uri)?;
   let (tx, rx) = oneshot::channel();
 
