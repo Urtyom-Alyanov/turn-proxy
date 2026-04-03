@@ -28,7 +28,8 @@ pub async fn run_proxy_server(ctx: Arc<ProxyContext>) -> anyhow::Result<()>
   let app = Router::new()
     .route("/", get(proxy_handler).post(proxy_handler))
     .route("/local-captcha-result", post(captcha_result_handler))
-    .route("/generic_proxy", get(generic_proxy_handler))
+    .route("/generic_proxy", get(generic_proxy_handler_get))
+    .route("/generic_proxy", post(generic_proxy_handler_post))
     .fallback(proxy_handler)
     .with_state(ctx);
 
@@ -117,7 +118,7 @@ async fn proxy_handler(
   }
 }
 
-async fn generic_proxy_handler(
+async fn generic_proxy_handler_get(
   State(ctx): State<Arc<ProxyContext>>,
   Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> impl IntoResponse
@@ -128,6 +129,30 @@ async fn generic_proxy_handler(
   }
 
   let resp = match ctx.http_client.get(url).send().await {
+    Ok(r) => r,
+    Err(_) => return StatusCode::BAD_GATEWAY.into_response(),
+  };
+
+  let mut rb = Response::builder().status(resp.status());
+  for (k, v) in resp.headers() {
+    rb = rb.header(k, v);
+  }
+  rb.body(Body::from(resp.bytes().await.unwrap_or_default()))
+    .unwrap()
+    .into_response()
+}
+
+async fn generic_proxy_handler_post(
+  State(ctx): State<Arc<ProxyContext>>,
+  Query(params): Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse
+{
+  let url = params.get("proxy_url").cloned().unwrap_or_default();
+  if url.is_empty() {
+    return StatusCode::BAD_REQUEST.into_response();
+  }
+
+  let resp = match ctx.http_client.post(url).send().await {
     Ok(r) => r,
     Err(_) => return StatusCode::BAD_GATEWAY.into_response(),
   };

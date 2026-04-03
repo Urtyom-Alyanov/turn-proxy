@@ -7,11 +7,16 @@ pub const IMAGE_SERVER_ADDR: &str = "127.0.0.1:8765";
 use std::collections::HashMap;
 
 use anyhow::{Result, anyhow};
+use lazy_static::lazy_static;
 use serde_json::{Map, Value};
-
+use tokio::sync::Mutex;
 use crate::providers::vk::captcha_solve::{
   image_view::solve_captcha_via_image, redirect_uri::solve_captcha_via_proxy,
 };
+
+lazy_static! {
+    static ref CAPTCHA_LOCK: Mutex<()> = Mutex::new(());
+}
 
 /// Выводит пользователю капчу (либо страницу от ВК, либо картинку).
 ///
@@ -24,6 +29,8 @@ pub async fn solve_captcha(
   max_attempts: usize,
 ) -> Result<HashMap<String, String>>
 {
+  let _lock = CAPTCHA_LOCK.lock().await;
+  
   let code = err_obj
     .get("error_code")
     .and_then(|v| v.as_i64())
