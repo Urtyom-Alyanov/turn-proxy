@@ -1,6 +1,10 @@
+pub mod datatypes;
+pub mod captcha_solve;
+mod vk_api;
+
 use std::{collections::HashMap, net::IpAddr};
 
-use anyhow::{Context, Ok, Result, anyhow};
+use anyhow::{Context, Result, anyhow, Ok};
 use reqwest::Client;
 use serde_json::Value;
 use tracing::info;
@@ -10,6 +14,8 @@ use crate::{
   inbound::create_inbound_client,
   proxy_process::turn_configure::TurnCredentials,
 };
+use crate::providers::vk::datatypes::CaptchaError;
+use crate::providers::vk::vk_api::vk_api_request;
 
 struct CallTokenCredentials
 {
@@ -109,7 +115,7 @@ async fn get_anonymous_token(client: &Client) -> Result<String>
   Ok(token.to_owned())
 }
 
-/// Позволяет получить `call_payload` для токена
+// /// Позволяет получить `call_payload` для токена
 // async fn get_call_payload(
 //   client: &Client,
 //   access_token: String,
@@ -148,32 +154,20 @@ async fn get_call_token(
   credentials: CallTokenCredentials,
 ) -> Result<String>
 {
-  let url = "https://api.vk.ru/method/calls.getAnonymousToken";
-
-  info!("Getting call token for {}...", &credentials.call_id);
   let join_link = format!("https://vk.com/call/join/{}", credentials.call_id);
-
-  let body = HashMap::from([
-    ("client_id", VK_CLIENT_ID.to_owned()),
-    ("v", VK_API_VERSION.to_owned()),
-    ("access_token", access_token),
-    ("name", credentials.name),
-    ("vk_join_link", join_link),
-  ]);
-
-  let resp = client
-    .post(url)
-    .form(&body)
-    .send()
-    .await?
-    .json::<Value>()
-    .await?;
-
+  
+  let resp = vk_api_request(
+    client,
+    "calls.getAnonymousToken",
+    &access_token,
+    HashMap::from([
+      ("name".to_owned(), credentials.name),
+      ("vk_join_link".to_owned(), join_link),
+    ])
+  ).await?;
+  
   Ok(
-    resp["response"]["token"]
-      .as_str()
-      .ok_or_else(|| anyhow!("Failed to get call token from response"))?
-      .to_owned(),
+    resp["token"].as_str().ok_or_else(|| anyhow!("Failed to get token from response"))?.to_owned()
   )
 }
 

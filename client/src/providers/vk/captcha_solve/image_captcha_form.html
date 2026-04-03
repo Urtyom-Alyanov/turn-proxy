@@ -1,0 +1,27 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+      body {{ font-family: sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }}
+      .card {{ background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: inline-block; }}
+      img {{ max-width: 100%; margin: 16px 0; border-radius: 4px; border: 1px solid #ddd; }}
+      input {{ font-size: 24px; padding: 12px; width: 100%; box-sizing: border-box; border: 2px solid #007bff; border-radius: 8px; outline: none; }}
+      button {{ font-size: 20px; padding: 12px 32px; margin-top: 16px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 8px; width: 100%; }}
+      button:hover {{ background: #0056b3; }}
+  </style>
+  <title>салолох</title>
+</head>
+<body>
+<div class="card">
+  <h2>Введите текст с картинки</h2>
+  <form action="/solve" method="get">
+    <label>
+      <img src="{image}" alt="captcha"/>
+      <input name="key" type="text" autofocus placeholder="АБЫВЫГЫДЫ..."/>
+    </label>
+    <button type="submit">Отправить</button>
+  </form>
+</div>
+</body>
+</html>
