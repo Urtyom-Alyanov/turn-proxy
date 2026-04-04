@@ -1,6 +1,6 @@
 # Maintainer: Urtyom Alyanov <urtyomalynov@gmail.com>
 pkgname=turn-proxy-client-rs
-pkgver=1.0.12
+pkgver=1.0.13
 pkgrel=1
 pkgdesc="DTLS proxy client for TURN-based video call traffic relay"
 arch=('x86_64' 'aarch64')
@@ -36,7 +36,7 @@ package() {
     # Установка конфига по умолчанию
     install -Dm644 "client/example.toml" "$pkgdir/etc/turn-proxy/client/config.toml"
 
-    if [ -f " "server/services/systemd/turn-proxy-client.service" ]; then
+    if [ -f "server/services/systemd/turn-proxy-client.service" ]; then
         install -Dm644 "client/services/systemd/turn-proxy-client.service" "$pkgdir/usr/lib/systemd/system/turn-proxy-client.service"
     fi
 
