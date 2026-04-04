@@ -14,7 +14,7 @@ use serde_json::{Map, Value};
 use tokio::sync::Mutex;
 
 use crate::providers::vk::captcha_solve::{
-  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge
+  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge,
 };
 
 lazy_static! {

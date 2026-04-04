@@ -11,8 +11,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::{
-  inbound::create_inbound_client,
-  providers::vk::{vk_api::vk_api_request},
+  inbound::create_inbound_client, providers::vk::vk_api::vk_api_request,
   proxy_process::turn_configure::TurnCredentials,
 };
 
