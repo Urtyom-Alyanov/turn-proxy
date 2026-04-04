@@ -7,8 +7,10 @@ use std::{collections::HashMap, net::IpAddr};
 use anyhow::{Context, Ok, Result, anyhow};
 use reqwest::Client;
 use serde_json::Value;
+use tokio::sync::Mutex;
 use tracing::info;
 use uuid::Uuid;
+use lazy_static::lazy_static;
 
 use crate::{
   inbound::create_inbound_client, providers::vk::vk_api::vk_api_request,
@@ -19,6 +21,10 @@ struct CallTokenCredentials
 {
   name: String,
   call_id: String,
+}
+
+lazy_static! {
+  static ref SESSION_GET_LOCK: Mutex<()> = Mutex::new(());
 }
 
 const VK_CLIENT_SECRET: &str = "QbYic1K3lEV5kTGiqlq2";
@@ -51,6 +57,8 @@ pub async fn get_vk_calls_turn_credentials(
     call_id: call_id.clone(),
     name: with_name.unwrap_or("Гость".to_owned()),
   };
+
+  let _lock = SESSION_GET_LOCK.lock().await;
 
   let (call_token, okcdn_token) = tokio::join!(
     async {

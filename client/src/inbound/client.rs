@@ -13,6 +13,7 @@ pub fn create_client(
 {
   let builder = reqwest::ClientBuilder::new()
     .no_proxy()
+    .cookie_store(true)
     .hickory_dns(true)
     .user_agent(USER_AGENT)
     .local_address(addr_interface)

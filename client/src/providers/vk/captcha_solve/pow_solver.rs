@@ -2,12 +2,14 @@ use std::{collections::HashMap, time::Duration};
 
 use anyhow::{Result, anyhow};
 use base64::{Engine, engine::general_purpose};
+use rand::RngExt;
 use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
 use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::task::spawn_blocking;
+use tracing::info;
 
 /// Извлекает `session_token` из `redirect_uri`, если он там есть
 fn extract_session_token(redirect_uri: &str) -> Option<String>
@@ -19,6 +21,74 @@ fn extract_session_token(redirect_uri: &str) -> Option<String>
     .find(|(key, _)| key == "session_token")
     .map(|(_, value)| value.into_owned())
 }
+
+/// Генерирует рандомные значения скорости соединения для имитации реального пользователя при решении PoW задачи
+fn generate_random_downlink() -> String
+{
+  let mut rng = rand::rng();
+  
+  let base_speed: f32 = rng.random_range(5.0..15.0);
+  
+  let mut samples = Vec::new();
+  for _ in 0..16 {
+      let noise = rng.random_range(-1.2..1.3);
+      let val = (base_speed + noise).clamp(0.5, 15.0);
+      
+      samples.push(format!("{:.1}", val));
+  }
+
+  format!("[{}]", samples.join(","))
+}
+
+
+/// Генерирует рандомные координаты курсора для имитации движения мыши при решении PoW задачи
+fn generate_random_cursor() -> String
+{
+  let mut rng = rand::rng();
+  let mut points = Vec::new();
+
+  // Начальная точка (где-то в области контента)
+  let mut curr_x = rng.random_range(100..900) as i32;
+  let mut curr_y = rng.random_range(100..700) as i32;
+
+  // Генерируем от 15 до 30 точек пути
+  let steps = rng.random_range(15..30);
+  
+  // Направление движения (куда "ползет" мышь)
+  let mut dx = rng.random_range(-2..=2);
+  let mut dy = rng.random_range(-2..=2);
+
+  for i in 0..steps {
+      // Каждые несколько шагов немного меняем вектор направления (плавный поворот)
+      if i % 5 == 0 {
+        dx += rng.random_range(-1..=1);
+        dy += rng.random_range(-1..=1);
+      }
+
+      // Добавляем микро-дрожание (jitter)
+      let jitter_x = rng.random_range(-1..=1);
+      let jitter_y = rng.random_range(-1..=1);
+
+      curr_x += dx + jitter_x;
+      curr_y += dy + jitter_y;
+
+      points.push(json!({
+          "x": curr_x,
+          "y": curr_y
+      }));
+      
+      // Иногда мышь замирает на месте (имитируем микро-паузы пользователя)
+      if rng.random_bool(0.1) {
+        points.push(json!({
+          "x": curr_x,
+          "y": curr_y
+      }));
+    }
+  }
+
+  serde_json::to_string(&points).unwrap_or_else(|_| "[]".to_string())
+}
+
 
 /// Решает PoW задачу, предоставленную ВК, и получает `success_token`, который
 /// можно использовать для обхода капчи.
@@ -34,8 +104,12 @@ pub async fn solve_pow_challenge(
 
   let session_token = session_token.unwrap_or(session_token_from_url.as_str());
 
+  info!("Starting PoW challenge solve, session_token: {}", session_token);
+
   let (pow_input, difficulty) =
     fetch_pow_challenge(client, redirect_url).await?;
+
+  info!("Getted input and difficulty: {}, {}", pow_input, difficulty);
 
   let hash_handle = spawn_blocking(move || solve_pow(&pow_input, difficulty));
 
@@ -49,8 +123,15 @@ pub async fn solve_pow_challenge(
   let hash = hash_handler??;
   let base_body = base_body_handler?;
 
+  info!("Getted hash (solve): {}", hash);
+
   let success_token =
-    submit_pow_solution(client, &hash, base_body, &browser_fp).await?;
+    submit_pow_solution(client, &hash, base_body.clone(), &browser_fp).await?;
+
+  info!("Getted success token: {}", success_token);
+
+  let _ = vk_api_request_internal(client, "captchaNotRobot.endSession", base_body).await;
+  info!("Gracefully ending PoW session...");
 
   Ok(success_token)
 }
@@ -95,7 +176,7 @@ fn solve_pow(pow_input: &str, difficulty: usize) -> Result<String>
   //     return Ok(hex_hash);
   //   }
   // }
-  (0..10_000_000)
+  (0..u64::MAX)
     .into_par_iter()
     .find_map_any(|nonce| {
       let data = format!("{}{}", pow_input, nonce);
@@ -121,26 +202,29 @@ async fn submit_pow_solution(
   browser_fp: &str,
 ) -> Result<String>
 {
-  let cursor = r#"[{"x":950,"y":500},{"x":945,"y":510},{"x":940,"y":520},{"x":938,"y":525},{"x":938,"y":525}]"#;
+  let cursor = generate_random_cursor();
   let answer = general_purpose::STANDARD.encode("{}");
 
   let empty_array_string = "[]";
-  let connection_downlink =
-    "[9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5,9.5]";
+  let connection_downlink = generate_random_downlink();
+  let rtt = rand::rng().random_range(200..900).to_string();
+
+  info!("Generated cursor: {}", cursor);
+  info!("Generated connection downlink: {}", connection_downlink);
 
   let mut body = HashMap::from([
     ("hash".to_owned(), hash.to_owned()),
     ("answer".to_owned(), answer),
     ("browser_fp".to_owned(), browser_fp.to_owned()),
-    ("cursor".to_owned(), cursor.to_owned()),
+    ("cursor".to_owned(), cursor),
     ("accelerometer".to_owned(), empty_array_string.to_owned()),
     ("gyroscope".to_owned(), empty_array_string.to_owned()),
     ("motion".to_owned(), empty_array_string.to_owned()),
     ("taps".to_owned(), empty_array_string.to_owned()),
-    ("connectionRtt".to_owned(), "".to_owned()),
+    ("connectionRtt".to_owned(), rtt),
     (
       "connectionDownlink".to_owned(),
-      connection_downlink.to_owned(),
+      connection_downlink,
     ),
     (
       "debug_info".to_owned(),
@@ -188,13 +272,18 @@ async fn create_pow_environment(
     ),
   ]);
 
+  tokio::time::sleep(random_sleep()).await;
+
+
   vk_api_request_internal(
     client,
     "captchaNotRobot.settings",
     base_body.clone(),
   )
   .await?;
-  tokio::time::sleep(Duration::from_millis(200)).await;
+  tokio::time::sleep(random_sleep()).await; 
+
+  let (cores, memories) = random_hardware_info();
 
   let device_json = json!({
     "screenWidth": 1920,
@@ -204,11 +293,11 @@ async fn create_pow_environment(
     "innerWidth":1920,
     "innerHeight":945,
     "devicePixelRatio": 1,
-    "language": "en-US",
-    "languages":["en-US"],
+    "language": "ru-RU",
+    "languages":["ru-RU", "ru", "en-US", "en"],
     "webdriver":false,
-    "hardwareConcurrency":16,
-    "deviceMemory":8,
+    "hardwareConcurrency": cores,
+    "deviceMemory": memories,
     "connectionEffectiveType":"4g",
     "notificationsPermission":"denied"
   })
@@ -223,9 +312,26 @@ async fn create_pow_environment(
 
   vk_api_request_internal(client, "captchaNotRobot.componentDone", done_data)
     .await?;
-  tokio::time::sleep(Duration::from_millis(200)).await;
+  tokio::time::sleep(random_sleep()).await;
 
   Ok(base_body)
+}
+
+fn random_hardware_info() -> (u8, u8)
+{
+  let mut rng = rand::rng();
+  let cores_options = [4, 8, 12, 16];
+  let memory_options = [4, 8, 16, 32];
+
+  let cores = cores_options[rng.random_range(0..cores_options.len())];
+  let memory = memory_options[rng.random_range(0..memory_options.len())];
+
+  (cores, memory)
+}
+
+fn random_sleep() -> Duration
+{
+  Duration::from_millis(rand::rng().random_range(200..900))
 }
 
 /// Внутренняя функция для вызовов VK API
