@@ -7,7 +7,7 @@ use tracing::info;
 
 use crate::providers::vk::captcha_solve::solve_captcha;
 
-const VK_CLIENT_SECRET: &str = "QbYic1K3lEV5kTGiqlq2";
+// const VK_CLIENT_SECRET: &str = "QbYic1K3lEV5kTGiqlq2";
 const VK_CLIENT_ID: &str = "6287487";
 const VK_API_VERSION: &str = "5.274";
 

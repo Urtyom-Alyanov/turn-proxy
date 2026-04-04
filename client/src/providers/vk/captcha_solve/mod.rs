@@ -12,11 +12,9 @@ use lazy_static::lazy_static;
 use reqwest::Client;
 use serde_json::{Map, Value};
 use tokio::sync::Mutex;
-use turn::client;
 
 use crate::providers::vk::captcha_solve::{
-  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge,
-  redirect_uri::solve_captcha_via_proxy,
+  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge
 };
 
 lazy_static! {
@@ -30,7 +28,7 @@ lazy_static! {
 /// `err_obj`
 pub async fn solve_captcha(
   client: &Client,
-  access_token: &str,
+  _access_token: &str,
   err_obj: Map<String, Value>,
   attempt: usize,
   max_attempts: usize,
@@ -67,11 +65,6 @@ pub async fn solve_captcha(
   if !redirect_uri.is_empty() {
     // let success_token =
     //   solve_captcha_via_proxy(redirect_uri).await?.to_string();\
-
-    let session_token = err_obj
-      .get("session_token")
-      .and_then(|v| v.as_str())
-      .unwrap_or("");
 
     let success_token =
       solve_pow_challenge(client, redirect_uri, None, None).await?;

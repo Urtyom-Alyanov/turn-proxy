@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::{
   inbound::create_inbound_client,
-  providers::vk::{datatypes::CaptchaError, vk_api::vk_api_request},
+  providers::vk::{vk_api::vk_api_request},
   proxy_process::turn_configure::TurnCredentials,
 };
 
@@ -26,7 +26,7 @@ const VK_CLIENT_SECRET: &str = "QbYic1K3lEV5kTGiqlq2";
 const VK_CLIENT_ID: &str = "6287487";
 const OKCDN_APPLICATION_KEY: &str = "CGMMEJLGDIHBABABA";
 const VK_REALM: &str = "vk";
-const VK_API_VERSION: &str = "5.274";
+// const VK_API_VERSION: &str = "5.274";
 
 pub fn get_vk_call_id_from_link(link: &str) -> Result<&str>
 {
