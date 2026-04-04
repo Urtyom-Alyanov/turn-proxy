@@ -9,6 +9,7 @@ let
       (type == "directory") ||
       (baseName == "Cargo.toml" || baseName == "Cargo.lock") ||
       (lib.hasSuffix ".rs" baseName) ||
+      (lib.hasSuffix ".html" baseName) ||
       (baseName == "rustfmt.toml");
   };
 in
