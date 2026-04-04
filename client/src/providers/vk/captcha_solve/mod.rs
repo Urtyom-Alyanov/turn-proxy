@@ -1,6 +1,6 @@
 pub mod image_view;
-pub mod redirect_uri;
 pub mod pow_solver;
+pub mod redirect_uri;
 mod reverse_proxy;
 pub const PROXY_ADDR: &str = "127.0.0.1:8765";
 pub const IMAGE_SERVER_ADDR: &str = "127.0.0.1:8765";
@@ -13,12 +13,14 @@ use reqwest::Client;
 use serde_json::{Map, Value};
 use tokio::sync::Mutex;
 use turn::client;
+
 use crate::providers::vk::captcha_solve::{
-  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge, redirect_uri::solve_captcha_via_proxy
+  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge,
+  redirect_uri::solve_captcha_via_proxy,
 };
 
 lazy_static! {
-    static ref CAPTCHA_LOCK: Mutex<()> = Mutex::new(());
+  static ref CAPTCHA_LOCK: Mutex<()> = Mutex::new(());
 }
 
 /// Выводит пользователю капчу (либо страницу от ВК, либо картинку).
@@ -35,7 +37,7 @@ pub async fn solve_captcha(
 ) -> Result<HashMap<String, String>>
 {
   let _lock = CAPTCHA_LOCK.lock().await;
-  
+
   let code = err_obj
     .get("error_code")
     .and_then(|v| v.as_i64())
@@ -71,7 +73,8 @@ pub async fn solve_captcha(
       .and_then(|v| v.as_str())
       .unwrap_or("");
 
-    let success_token = solve_pow_challenge(client, redirect_uri, None, None).await?;
+    let success_token =
+      solve_pow_challenge(client, redirect_uri, None, None).await?;
 
     params.insert("success_token".to_owned(), success_token);
 

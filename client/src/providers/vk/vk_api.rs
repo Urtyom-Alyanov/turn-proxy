@@ -43,8 +43,14 @@ pub async fn vk_api_request(
 
     if let Some(error_object) = resp["error"].as_object() {
       let error_object_clone = error_object.clone();
-      captcha_params =
-        solve_captcha(client, access_token, error_object_clone, attempt, max_attempts).await?;
+      captcha_params = solve_captcha(
+        client,
+        access_token,
+        error_object_clone,
+        attempt,
+        max_attempts,
+      )
+      .await?;
 
       info!(
         "Captcha solved, retrying request (attempt {})...",
