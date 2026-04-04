@@ -8,9 +8,9 @@ use axum::{
   response::{Html, IntoResponse},
   routing::{get, post},
 };
+use reqwest::Url;
 use tokio::sync::{Mutex, oneshot};
 use tracing::info;
-use url::Url;
 
 use crate::providers::vk::captcha_solve::PROXY_ADDR;
 

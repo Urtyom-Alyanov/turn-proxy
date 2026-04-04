@@ -1,7 +1,9 @@
 use std::{net::IpAddr, sync::Arc};
 
 use anyhow::Result;
-use reqwest::{Client, dns::Resolve, header::USER_AGENT};
+use reqwest::{Client, dns::Resolve};
+
+use crate::inbound::USER_AGENT;
 
 /// Создаётся клиент с определённым DNS-резолвером и IP интерфейсом
 pub fn create_client(

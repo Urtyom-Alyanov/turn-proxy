@@ -1,5 +1,6 @@
 pub mod image_view;
 pub mod redirect_uri;
+pub mod pow_solver;
 mod reverse_proxy;
 pub const PROXY_ADDR: &str = "127.0.0.1:8765";
 pub const IMAGE_SERVER_ADDR: &str = "127.0.0.1:8765";
@@ -8,10 +9,12 @@ use std::collections::HashMap;
 
 use anyhow::{Result, anyhow};
 use lazy_static::lazy_static;
+use reqwest::Client;
 use serde_json::{Map, Value};
 use tokio::sync::Mutex;
+use turn::client;
 use crate::providers::vk::captcha_solve::{
-  image_view::solve_captcha_via_image, redirect_uri::solve_captcha_via_proxy,
+  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge, redirect_uri::solve_captcha_via_proxy
 };
 
 lazy_static! {
@@ -24,6 +27,8 @@ lazy_static! {
 /// `success_token`), а также с `captcha_ts` и `captcha_attempt` при их имении в
 /// `err_obj`
 pub async fn solve_captcha(
+  client: &Client,
+  access_token: &str,
   err_obj: Map<String, Value>,
   attempt: usize,
   max_attempts: usize,
@@ -58,8 +63,15 @@ pub async fn solve_captcha(
     .unwrap_or("");
 
   if !redirect_uri.is_empty() {
-    let success_token =
-      solve_captcha_via_proxy(redirect_uri).await?.to_string();
+    // let success_token =
+    //   solve_captcha_via_proxy(redirect_uri).await?.to_string();\
+
+    let session_token = err_obj
+      .get("session_token")
+      .and_then(|v| v.as_str())
+      .unwrap_or("");
+
+    let success_token = solve_pow_challenge(client, redirect_uri, None, None).await?;
 
     params.insert("success_token".to_owned(), success_token);
 

@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use reqwest::Url;
 use tokio::sync::{Mutex, oneshot};
 use tracing::info;
-use url::Url;
 
 use crate::providers::vk::captcha_solve::{PROXY_ADDR, reverse_proxy};
 
