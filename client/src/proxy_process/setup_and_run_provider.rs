@@ -11,14 +11,12 @@ use webrtc_util::Conn;
 use crate::{
   configuration::configuration::{
     DefaultProvider, ProviderConfiguration, ProviderDetails,
-  },
-  providers::{
+  }, inbound::user_agent::get_random_user_agent, providers::{
     vk::{get_vk_call_id_from_link, get_vk_calls_turn_credentials},
     yandex::{
       get_yandex_call_id_from_link, get_yandex_telebridge_turn_credentials,
     },
-  },
-  proxy_process::turn_configure::{TurnCredentials, turn_configure},
+  }, proxy_process::turn_configure::{TurnCredentials, turn_configure}
 };
 
 pub async fn setup_and_run_provider(
@@ -71,7 +69,9 @@ async fn fetch_creds(
             .await
         }
         DefaultProvider::YandexTelemost => {
-          get_yandex_telebridge_turn_credentials(interface, call_id, None).await
+          let user_agent = get_random_user_agent();
+
+          get_yandex_telebridge_turn_credentials(interface, call_id, &user_agent.value, None).await
         }
       }
     }

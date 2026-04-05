@@ -207,7 +207,7 @@ async fn submit_pow_solution(
 
   let empty_array_string = "[]";
   let connection_downlink = generate_random_downlink();
-  let rtt = rand::rng().random_range(200..900).to_string();
+  let rtt = rand::rng().random_range(40..120).to_string();
 
   info!("Generated cursor: {}", cursor);
   info!("Generated connection downlink: {}", connection_downlink);
@@ -321,7 +321,7 @@ fn random_hardware_info() -> (u8, u8)
 {
   let mut rng = rand::rng();
   let cores_options = [4, 8, 12, 16];
-  let memory_options = [4, 8, 16, 32];
+  let memory_options = [2, 4, 8];
 
   let cores = cores_options[rng.random_range(0..cores_options.len())];
   let memory = memory_options[rng.random_range(0..memory_options.len())];
@@ -331,7 +331,7 @@ fn random_hardware_info() -> (u8, u8)
 
 fn random_sleep() -> Duration
 {
-  Duration::from_millis(rand::rng().random_range(200..900))
+  Duration::from_millis(rand::rng().random_range(40..120))
 }
 
 /// Внутренняя функция для вызовов VK API

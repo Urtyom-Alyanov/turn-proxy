@@ -15,7 +15,7 @@ use tokio_tungstenite::{
 use uuid::Uuid;
 
 use crate::{
-  inbound::{USER_AGENT, create_inbound_client},
+  inbound::{create_inbound_client},
   providers::yandex::datatypes::{
     ConferenceResponse, HelloPayload, HelloRequest, WssResponse,
   },
@@ -24,12 +24,15 @@ use crate::{
 
 const YANDEX_REALM: &str = "yandex";
 const YANDEX_SERVICE_NAME: &str = "telemost";
-static YANDEX_SDK_INFO: LazyLock<serde_json::Value> = LazyLock::new(|| {
+
+fn get_sdk_info(user_agent: &str) -> serde_json::Value
+{
   json!({
     "implementation": "browser", "version": "5.15.0",
-    "userAgent": USER_AGENT, "hwConcurrency": 4
+    "userAgent": user_agent, "hwConcurrency": 4,
   })
-});
+}
+
 static YANDEX_CAPABILITIES_OFFER: LazyLock<serde_json::Value> = LazyLock::new(
   || {
     json!({
@@ -70,6 +73,7 @@ pub fn get_yandex_call_id_from_link(link: &str) -> Result<&str>
 pub async fn get_yandex_telebridge_turn_credentials(
   interface: IpAddr,
   call_id: &str,
+  user_agent: &str,
   with_name: Option<String>,
 ) -> Result<TurnCredentials>
 {
@@ -80,7 +84,7 @@ pub async fn get_yandex_telebridge_turn_credentials(
   );
 
   let mut headers = HeaderMap::new();
-  headers.insert("User-Agent", HeaderValue::from_static(USER_AGENT));
+  headers.insert("User-Agent", HeaderValue::from_str(user_agent)?);
   headers.insert(
     "Origin",
     HeaderValue::from_static("https://telemost.yandex.ru"),
@@ -105,7 +109,7 @@ pub async fn get_yandex_telebridge_turn_credentials(
   let name = with_name.unwrap_or("Гость".to_owned());
 
   let ws_request =
-    ws_request_builder(&conf_resp.client_configuration.media_server_url)?;
+    ws_request_builder(&conf_resp.client_configuration.media_server_url, user_agent)?;
   let (mut ws_stream, _) = connect_async(ws_request)
     .await
     .map_err(|e| anyhow!("WS connect error: {}", e))?;
@@ -123,7 +127,7 @@ pub async fn get_yandex_telebridge_turn_credentials(
       service_name: YANDEX_SERVICE_NAME.to_string(),
       credentials: conf_resp.credentials,
       sdk_init_id: Uuid::new_v4().to_string(),
-      sdk_info: YANDEX_SDK_INFO.clone(),
+      sdk_info: get_sdk_info(user_agent),
       capabilities_offer: YANDEX_CAPABILITIES_OFFER.clone(),
     },
   };
@@ -164,12 +168,12 @@ pub async fn get_yandex_telebridge_turn_credentials(
   Err(anyhow!("Failed to extract TURN creds from Yandex WS"))
 }
 
-fn ws_request_builder(url: &str) -> Result<TungsteniteRequest>
+fn ws_request_builder(url: &str, user_agent: &str) -> Result<TungsteniteRequest>
 {
   let request = TungsteniteRequest::builder()
     .uri(url)
     .header("Origin", "https://telemost.yandex.ru")
-    .header("User-Agent", USER_AGENT)
+    .header("User-Agent", user_agent)
     .body(())?;
   Ok(request)
 }
