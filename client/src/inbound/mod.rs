@@ -11,7 +11,6 @@ mod dns;
 pub mod interface;
 pub mod user_agent;
 
-
 /// Создаём исходный клиент для запросов к провайдерам внутри белых списков
 pub async fn create_inbound_client(ip_interface: IpAddr) -> Result<Client>
 {

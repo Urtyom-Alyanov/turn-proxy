@@ -15,7 +15,7 @@ use tokio_tungstenite::{
 use uuid::Uuid;
 
 use crate::{
-  inbound::{create_inbound_client},
+  inbound::create_inbound_client,
   providers::yandex::datatypes::{
     ConferenceResponse, HelloPayload, HelloRequest, WssResponse,
   },
@@ -108,8 +108,10 @@ pub async fn get_yandex_telebridge_turn_credentials(
 
   let name = with_name.unwrap_or("Гость".to_owned());
 
-  let ws_request =
-    ws_request_builder(&conf_resp.client_configuration.media_server_url, user_agent)?;
+  let ws_request = ws_request_builder(
+    &conf_resp.client_configuration.media_server_url,
+    user_agent,
+  )?;
   let (mut ws_stream, _) = connect_async(ws_request)
     .await
     .map_err(|e| anyhow!("WS connect error: {}", e))?;
@@ -168,7 +170,8 @@ pub async fn get_yandex_telebridge_turn_credentials(
   Err(anyhow!("Failed to extract TURN creds from Yandex WS"))
 }
 
-fn ws_request_builder(url: &str, user_agent: &str) -> Result<TungsteniteRequest>
+fn ws_request_builder(url: &str, user_agent: &str)
+-> Result<TungsteniteRequest>
 {
   let request = TungsteniteRequest::builder()
     .uri(url)

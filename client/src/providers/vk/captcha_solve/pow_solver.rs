@@ -22,26 +22,27 @@ fn extract_session_token(redirect_uri: &str) -> Option<String>
     .map(|(_, value)| value.into_owned())
 }
 
-/// Генерирует рандомные значения скорости соединения для имитации реального пользователя при решении PoW задачи
+/// Генерирует рандомные значения скорости соединения для имитации реального
+/// пользователя при решении PoW задачи
 fn generate_random_downlink() -> String
 {
   let mut rng = rand::rng();
-  
+
   let base_speed: f32 = rng.random_range(5.0..15.0);
-  
+
   let mut samples = Vec::new();
   for _ in 0..16 {
-      let noise = rng.random_range(-1.2..1.3);
-      let val = (base_speed + noise).clamp(0.5, 15.0);
-      
-      samples.push(format!("{:.1}", val));
+    let noise = rng.random_range(-1.2..1.3);
+    let val = (base_speed + noise).clamp(0.5, 15.0);
+
+    samples.push(format!("{:.1}", val));
   }
 
   format!("[{}]", samples.join(","))
 }
 
-
-/// Генерирует рандомные координаты курсора для имитации движения мыши при решении PoW задачи
+/// Генерирует рандомные координаты курсора для имитации движения мыши при
+/// решении PoW задачи
 fn generate_random_cursor() -> String
 {
   let mut rng = rand::rng();
@@ -53,33 +54,34 @@ fn generate_random_cursor() -> String
 
   // Генерируем от 15 до 30 точек пути
   let steps = rng.random_range(15..30);
-  
+
   // Направление движения (куда "ползет" мышь)
   let mut dx = rng.random_range(-2..=2);
   let mut dy = rng.random_range(-2..=2);
 
   for i in 0..steps {
-      // Каждые несколько шагов немного меняем вектор направления (плавный поворот)
-      if i % 5 == 0 {
-        dx += rng.random_range(-1..=1);
-        dy += rng.random_range(-1..=1);
-      }
+    // Каждые несколько шагов немного меняем вектор направления (плавный
+    // поворот)
+    if i % 5 == 0 {
+      dx += rng.random_range(-1..=1);
+      dy += rng.random_range(-1..=1);
+    }
 
-      // Добавляем микро-дрожание (jitter)
-      let jitter_x = rng.random_range(-1..=1);
-      let jitter_y = rng.random_range(-1..=1);
+    // Добавляем микро-дрожание (jitter)
+    let jitter_x = rng.random_range(-1..=1);
+    let jitter_y = rng.random_range(-1..=1);
 
-      curr_x += dx + jitter_x;
-      curr_y += dy + jitter_y;
+    curr_x += dx + jitter_x;
+    curr_y += dy + jitter_y;
 
+    points.push(json!({
+        "x": curr_x,
+        "y": curr_y
+    }));
+
+    // Иногда мышь замирает на месте (имитируем микро-паузы пользователя)
+    if rng.random_bool(0.1) {
       points.push(json!({
-          "x": curr_x,
-          "y": curr_y
-      }));
-      
-      // Иногда мышь замирает на месте (имитируем микро-паузы пользователя)
-      if rng.random_bool(0.1) {
-        points.push(json!({
           "x": curr_x,
           "y": curr_y
       }));
@@ -88,7 +90,6 @@ fn generate_random_cursor() -> String
 
   serde_json::to_string(&points).unwrap_or_else(|_| "[]".to_string())
 }
-
 
 /// Решает PoW задачу, предоставленную ВК, и получает `success_token`, который
 /// можно использовать для обхода капчи.
@@ -104,7 +105,10 @@ pub async fn solve_pow_challenge(
 
   let session_token = session_token.unwrap_or(session_token_from_url.as_str());
 
-  info!("Starting PoW challenge solve, session_token: {}", session_token);
+  info!(
+    "Starting PoW challenge solve, session_token: {}",
+    session_token
+  );
 
   let (pow_input, difficulty) =
     fetch_pow_challenge(client, redirect_url).await?;
@@ -130,7 +134,9 @@ pub async fn solve_pow_challenge(
 
   info!("Getted success token: {}", success_token);
 
-  let _ = vk_api_request_internal(client, "captchaNotRobot.endSession", base_body).await;
+  let _ =
+    vk_api_request_internal(client, "captchaNotRobot.endSession", base_body)
+      .await;
   info!("Gracefully ending PoW session...");
 
   Ok(success_token)
@@ -222,10 +228,7 @@ async fn submit_pow_solution(
     ("motion".to_owned(), empty_array_string.to_owned()),
     ("taps".to_owned(), empty_array_string.to_owned()),
     ("connectionRtt".to_owned(), rtt),
-    (
-      "connectionDownlink".to_owned(),
-      connection_downlink,
-    ),
+    ("connectionDownlink".to_owned(), connection_downlink),
     (
       "debug_info".to_owned(),
       "d44f534ce8deb56ba20be52e05c433309b49ee4d2a70602deeb17a1954257785"
@@ -274,14 +277,13 @@ async fn create_pow_environment(
 
   tokio::time::sleep(random_sleep()).await;
 
-
   vk_api_request_internal(
     client,
     "captchaNotRobot.settings",
     base_body.clone(),
   )
   .await?;
-  tokio::time::sleep(random_sleep()).await; 
+  tokio::time::sleep(random_sleep()).await;
 
   let (cores, memories) = random_hardware_info();
 
