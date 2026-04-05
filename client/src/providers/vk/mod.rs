@@ -13,7 +13,7 @@ use uuid::Uuid;
 use lazy_static::lazy_static;
 
 use crate::{
-  inbound::create_inbound_client, providers::vk::vk_api::vk_api_request,
+  inbound::create_inbound_client, providers::{generate_random_name, vk::vk_api::vk_api_request},
   proxy_process::turn_configure::TurnCredentials,
 };
 
@@ -53,9 +53,13 @@ pub async fn get_vk_calls_turn_credentials(
 {
   let client = create_inbound_client(interface).await?;
 
+  let random_name = generate_random_name::generate_random_name();
+
+  info!("Getting TURN credentials for VK call with name {}...", random_name);
+
   let anonymous: CallTokenCredentials = CallTokenCredentials {
     call_id: call_id.clone(),
-    name: with_name.unwrap_or("Гость".to_owned()),
+    name: with_name.unwrap_or(random_name),
   };
 
   let _lock = SESSION_GET_LOCK.lock().await;
