@@ -21,7 +21,7 @@ pub async fn create_inbound_client(ip_interface: IpAddr) -> Result<Client>
   let user_agent = user_agent::get_random_user_agent();
   info!("Selected random user agent: {}", user_agent.value);
 
-  let client = create_client(ip_interface, Arc::new(dns), &user_agent.value)?;
+  let client = create_client(ip_interface, Arc::new(dns), &user_agent)?;
   info!(
     "Inbound client created successfully with IP interface: {}",
     ip_interface

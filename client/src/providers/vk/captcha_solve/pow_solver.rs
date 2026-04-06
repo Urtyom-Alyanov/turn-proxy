@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Duration};
 
 use anyhow::{Result, anyhow};
 use base64::{Engine, engine::general_purpose};
-use rand::RngExt;
+use rand::{RngExt, seq::IndexedRandom as _};
 use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
 use regex::Regex;
 use reqwest::{Client, Url};
@@ -24,26 +24,26 @@ fn extract_session_token(redirect_uri: &str) -> Option<String>
 
 /// Генерирует рандомные значения скорости соединения для имитации реального
 /// пользователя при решении PoW задачи
-fn generate_random_downlink() -> String
-{
-  let mut rng = rand::rng();
+// fn generate_random_downlink() -> String
+// {
+//   let mut rng = rand::rng();
 
-  let base_speed: f32 = rng.random_range(5.0..15.0);
+//   let base_speed: f32 = rng.random_range(5.0..15.0);
 
-  let mut samples = Vec::new();
-  for _ in 0..16 {
-    let noise = rng.random_range(-1.2..1.3);
-    let val = (base_speed + noise).clamp(0.5, 15.0);
+//   let mut samples = Vec::new();
+//   for _ in 0..16 {
+//     let noise = rng.random_range(-1.2..1.3);
+//     let val = (base_speed + noise).clamp(0.5, 15.0);
 
-    samples.push(format!("{:.1}", val));
-  }
+//     samples.push(format!("{:.1}", val));
+//   }
 
-  format!("[{}]", samples.join(","))
-}
+//   format!("[{}]", samples.join(","))
+// }
 
 /// Генерирует рандомные координаты курсора для имитации движения мыши при
 /// решении PoW задачи
-fn generate_random_cursor() -> String
+fn generate_random_cursor(steps: usize) -> String
 {
   let mut rng = rand::rng();
   let mut points = Vec::new();
@@ -51,9 +51,6 @@ fn generate_random_cursor() -> String
   // Начальная точка (где-то в области контента)
   let mut curr_x = rng.random_range(100..900) as i32;
   let mut curr_y = rng.random_range(100..700) as i32;
-
-  // Генерируем от 15 до 30 точек пути
-  let steps = rng.random_range(15..30);
 
   // Направление движения (куда "ползет" мышь)
   let mut dx = rng.random_range(-2..=2);
@@ -171,33 +168,56 @@ async fn fetch_pow_challenge(
 /// начинающийся с нужного количества нулей
 fn solve_pow(pow_input: &str, difficulty: usize) -> Result<String>
 {
-  let target = "0".repeat(difficulty);
-  // for nonce in 1..10_000_000 {
-  //   let data = format!("{}{}", pow_input, nonce);
-  //   let mut hasher = Sha256::new();
-  //   hasher.update(data.as_bytes());
-  //   let hex_hash = hex::encode(hasher.finalize());
-
-  //   if hex_hash.starts_with(&target) {
-  //     return Ok(hex_hash);
-  //   }
-  // }
+  let full_bytes = difficulty / 2;
+  let has_half_byte = difficulty % 2 != 0;
   (0..u64::MAX)
-    .into_par_iter()
-    .find_map_any(|nonce| {
-      let data = format!("{}{}", pow_input, nonce);
-      let mut hasher = Sha256::new();
-      hasher.update(data.as_bytes());
-      let hex_hash = hex::encode(hasher.finalize());
+  .into_par_iter()
+  .find_first(|&nonce| {
+    let mut hasher = Sha256::new();
+    let data = format!("{}{}", pow_input, nonce);
+    
+    hasher.update(data.as_bytes());
+    let hash= hasher.finalize();
 
-      if hex_hash.starts_with(&target) {
-        Some(hex_hash)
-      } else {
-        None
+    for i in 0..full_bytes {
+      if hash[i] != 0 {
+        return false;
       }
-    })
-    .ok_or_else(|| anyhow!("Failed to solve PoW challenge"))
+    }
+
+    if has_half_byte {
+      if (hash[full_bytes] & 0xF0) != 0 {
+        return false;
+      }
+    }
+
+    true
+  }).map(|nonce| {
+    let data = format!("{}{}", pow_input, nonce);
+    let mut hasher = Sha256::new();
+    hasher.update(data.as_bytes());
+    hex::encode(hasher.finalize())
+  }).ok_or_else(|| anyhow!("Failed to solve PoW challenge"))
   // Err(anyhow!("Failed to solve PoW challenge"))
+}
+
+fn internet_metrics(count: usize) -> (String, String)
+{
+  let mut rng = rand::rng();
+
+  let rtt_val = *[50, 100, 200].choose(&mut rng).unwrap();
+  let rtt = format!("[{}]", (0..count).map(|_| rtt_val.to_string()).collect::<Vec<_>>().join(","));
+
+  let dl_val = *[10.0, 15.0, 9.5].choose(&mut rng).unwrap();
+  let downlink = format!("[{}]", (0..count).map(|_| format!("{:.1}", dl_val)).collect::<Vec<_>>().join(","));
+
+  (rtt, downlink)
+}
+
+fn random_count() -> usize
+{
+  let mut rng = rand::rng();
+  rng.random_range(5..15)
 }
 
 /// Отправляет решение PoW задачи на сервер и получает токен успеха
@@ -208,12 +228,14 @@ async fn submit_pow_solution(
   browser_fp: &str,
 ) -> Result<String>
 {
-  let cursor = generate_random_cursor();
+  let count = random_count();
+
+  let cursor = generate_random_cursor(count);
   let answer = general_purpose::STANDARD.encode("{}");
 
   let empty_array_string = "[]";
-  let connection_downlink = generate_random_downlink();
-  let rtt = rand::rng().random_range(40..120).to_string();
+
+  let (rtt, connection_downlink) = internet_metrics(count);
 
   info!("Generated cursor: {}", cursor);
   info!("Generated connection downlink: {}", connection_downlink);
@@ -242,7 +264,7 @@ async fn submit_pow_solution(
     vk_api_request_internal(client, "captchaNotRobot.check", body).await?;
 
   if resp["status"].as_str() != Some("OK") {
-    return Err(anyhow!("PoW solution rejected: {:#?}", resp));
+    return Err(anyhow!("PoW solution rejected. Reason: {:#?}", resp["status"].as_str().unwrap()));
   }
 
   let success_token = resp["success_token"]
@@ -333,7 +355,7 @@ fn random_hardware_info() -> (u8, u8)
 
 fn random_sleep() -> Duration
 {
-  Duration::from_millis(rand::rng().random_range(40..120))
+  Duration::from_millis(rand::rng().random_range(200..400))
 }
 
 /// Внутренняя функция для вызовов VK API
