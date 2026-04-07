@@ -3544,7 +3544,7 @@ dependencies = [
 
 [[package]]
 name = "turn-proxy-client"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3585,7 +3585,7 @@ dependencies = [
 
 [[package]]
 name = "turn-proxy-lib"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "anyhow",
  "futures-util",
@@ -3598,7 +3598,7 @@ dependencies = [
 
 [[package]]
 name = "turn-proxy-server"
-version = "1.0.14"
+version = "1.0.15"
 dependencies = [
  "anyhow",
  "clap",

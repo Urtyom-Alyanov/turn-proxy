@@ -25,6 +25,9 @@ turn-proxy-lib.workspace = true
 [package.metadata.deb]
 maintainer = "Urtyom Alyanov <urtyomalyanov@gmail.com>"
 maintainer-scripts = "dist-specific/deb"
+conf-files = [
+    "/etc/turn-proxy/server/config.toml"
+]
 copyright = "2026, Urtyom Alyanov"
 license-file = ["LICENSE", "4"]
 extended-description = """
@@ -53,10 +56,11 @@ assets = [
 assets = [
     { source = "target/release/turn-proxy-server", dest = "/usr/local/bin/turn-proxy-server", mode = "755" },
     { source = "services/systemd/turn-proxy-server.service", dest = "/usr/lib/systemd/system/turn-proxy-server.service", mode = "644" },
-    { source = "example.toml", dest = "/etc/turn-proxy/server/config.toml", mode = "644" },
+    { source = "example.toml", dest = "/etc/turn-proxy/server/config.toml", mode = "644", config = true },
 ]
 post_install = """
 systemctl daemon-reload
+systemctl try-restart turn-proxy-server
 """
 pre_uninstall = """
 systemctl stop turn-proxy-server || true
