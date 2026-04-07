@@ -8,8 +8,10 @@ use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use tokio::task::spawn_blocking;
+use tokio::{task::spawn_blocking};
 use tracing::info;
+
+use crate::providers::vk::captcha_solve::reverse_proxy::solve_via_reverse_proxy;
 
 /// Извлекает `session_token` из `redirect_uri`, если он там есть
 fn extract_session_token(redirect_uri: &str) -> Option<String>
@@ -127,7 +129,7 @@ pub async fn solve_pow_challenge(
   info!("Getted hash (solve): {}", hash);
 
   let success_token =
-    submit_pow_solution(client, &hash, base_body.clone(), &browser_fp).await?;
+    submit_pow_solution(client, &hash, base_body.clone(), &browser_fp, redirect_url).await?;
 
   info!("Getted success token: {}", success_token);
 
@@ -240,6 +242,7 @@ async fn submit_pow_solution(
   hash: &str,
   base_body: HashMap<String, String>,
   browser_fp: &str,
+  redirect_url: &str,
 ) -> Result<String>
 {
   let count = random_count();
@@ -278,6 +281,8 @@ async fn submit_pow_solution(
     vk_api_request_internal(client, "captchaNotRobot.check", body).await?;
 
   if resp["status"].as_str() != Some("OK") {
+    solve_via_reverse_proxy(client, redirect_url).await?;
+
     return Err(anyhow!(
       "PoW solution rejected. Reason: {:#?}",
       resp["status"].as_str().unwrap()
