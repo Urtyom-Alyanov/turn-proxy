@@ -18,7 +18,6 @@ pub fn create_client(
   if user_agent.chromium_based {
     let major_version = user_agent.major_version;
 
-
     let brand_name = match user_agent.browser {
       Browser::Chrome => "Google Chrome",
       Browser::Edge => "Microsoft Edge",
@@ -33,31 +32,50 @@ pub fn create_client(
       _ => "Linux",
     };
 
-
     let sec_ch_ua = format!(
       r#""{}";v="{}", "Chromium";v="{}", "Not-A.Brand";v="24""#,
       brand_name, major_version, major_version
     );
 
-
     headers.insert("sec-ch-ua", HeaderValue::from_str(&sec_ch_ua)?);
     headers.insert("sec-ch-ua-mobile", HeaderValue::from_static("?0"));
-    headers.insert("sec-ch-ua-platform", HeaderValue::from_str(&format!(r#""{}""#, platform))?);
-    headers.insert("sec-ch-ua-full-version", HeaderValue::from_str(&user_agent.full_version)?);
-    headers.insert("sec-ch-ua-platform-version", HeaderValue::from_static(r#""""#));
+    headers.insert(
+      "sec-ch-ua-platform",
+      HeaderValue::from_str(&format!(r#""{}""#, platform))?,
+    );
+    headers.insert(
+      "sec-ch-ua-full-version",
+      HeaderValue::from_str(&user_agent.full_version)?,
+    );
+    headers.insert(
+      "sec-ch-ua-platform-version",
+      HeaderValue::from_static(r#""""#),
+    );
     headers.insert("sec-ch-ua-model", HeaderValue::from_static(r#""""#));
     headers.insert("sec-ch-ua-arch", HeaderValue::from_static(r#""x86""#));
     headers.insert("sec-ch-ua-bitness", HeaderValue::from_static(r#""64""#));
     headers.insert("sec-ch-ua-wow64", HeaderValue::from_static("?0"));
-    headers.insert("sec-ch-ua-full-version-list", HeaderValue::from_str(&format!(r#""{}";v="{}", "Chromium";v="{}", "Not-A.Brand";v="24""#, brand_name, user_agent.full_version, user_agent.full_version))?);
-    headers.insert("sec-ch-ua-form-factors",HeaderValue::from_static("Desktop"));
+    headers.insert(
+      "sec-ch-ua-full-version-list",
+      HeaderValue::from_str(&format!(
+        r#""{}";v="{}", "Chromium";v="{}", "Not-A.Brand";v="24""#,
+        brand_name, user_agent.full_version, user_agent.full_version
+      ))?,
+    );
+    headers.insert(
+      "sec-ch-ua-form-factors",
+      HeaderValue::from_static("Desktop"),
+    );
 
     headers.insert("Sec-Fetch-Dest", HeaderValue::from_static("empty"));
     headers.insert("Sec-Fetch-Mode", HeaderValue::from_static("cors"));
     headers.insert("Sec-Fetch-Site", HeaderValue::from_static("same-site"));
   };
 
-  headers.insert("Accept-Language", HeaderValue::from_static("ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"));
+  headers.insert(
+    "Accept-Language",
+    HeaderValue::from_static("ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7"),
+  );
 
   let builder = reqwest::ClientBuilder::new()
     .no_proxy()

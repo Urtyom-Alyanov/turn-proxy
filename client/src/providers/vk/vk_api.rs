@@ -1,4 +1,4 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
 use anyhow::{Result, anyhow};
 use reqwest::Client;
@@ -42,7 +42,6 @@ pub async fn vk_api_request(
       .await?;
 
     if let Some(error_object) = resp["error"].as_object() {
-
       let error_object_clone = error_object.clone();
       captcha_params = solve_captcha(
         client,

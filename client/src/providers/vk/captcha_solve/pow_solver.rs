@@ -171,33 +171,35 @@ fn solve_pow(pow_input: &str, difficulty: usize) -> Result<String>
   let full_bytes = difficulty / 2;
   let has_half_byte = difficulty % 2 != 0;
   (0..u64::MAX)
-  .into_par_iter()
-  .find_first(|&nonce| {
-    let mut hasher = Sha256::new();
-    let data = format!("{}{}", pow_input, nonce);
-    
-    hasher.update(data.as_bytes());
-    let hash= hasher.finalize();
+    .into_par_iter()
+    .find_first(|&nonce| {
+      let mut hasher = Sha256::new();
+      let data = format!("{}{}", pow_input, nonce);
 
-    for i in 0..full_bytes {
-      if hash[i] != 0 {
-        return false;
+      hasher.update(data.as_bytes());
+      let hash = hasher.finalize();
+
+      for i in 0..full_bytes {
+        if hash[i] != 0 {
+          return false;
+        }
       }
-    }
 
-    if has_half_byte {
-      if (hash[full_bytes] & 0xF0) != 0 {
-        return false;
+      if has_half_byte {
+        if (hash[full_bytes] & 0xF0) != 0 {
+          return false;
+        }
       }
-    }
 
-    true
-  }).map(|nonce| {
-    let data = format!("{}{}", pow_input, nonce);
-    let mut hasher = Sha256::new();
-    hasher.update(data.as_bytes());
-    hex::encode(hasher.finalize())
-  }).ok_or_else(|| anyhow!("Failed to solve PoW challenge"))
+      true
+    })
+    .map(|nonce| {
+      let data = format!("{}{}", pow_input, nonce);
+      let mut hasher = Sha256::new();
+      hasher.update(data.as_bytes());
+      hex::encode(hasher.finalize())
+    })
+    .ok_or_else(|| anyhow!("Failed to solve PoW challenge"))
   // Err(anyhow!("Failed to solve PoW challenge"))
 }
 
@@ -206,10 +208,22 @@ fn internet_metrics(count: usize) -> (String, String)
   let mut rng = rand::rng();
 
   let rtt_val = *[50, 100, 200].choose(&mut rng).unwrap();
-  let rtt = format!("[{}]", (0..count).map(|_| rtt_val.to_string()).collect::<Vec<_>>().join(","));
+  let rtt = format!(
+    "[{}]",
+    (0..count)
+      .map(|_| rtt_val.to_string())
+      .collect::<Vec<_>>()
+      .join(",")
+  );
 
   let dl_val = *[10.0, 15.0, 9.5].choose(&mut rng).unwrap();
-  let downlink = format!("[{}]", (0..count).map(|_| format!("{:.1}", dl_val)).collect::<Vec<_>>().join(","));
+  let downlink = format!(
+    "[{}]",
+    (0..count)
+      .map(|_| format!("{:.1}", dl_val))
+      .collect::<Vec<_>>()
+      .join(",")
+  );
 
   (rtt, downlink)
 }
@@ -264,7 +278,10 @@ async fn submit_pow_solution(
     vk_api_request_internal(client, "captchaNotRobot.check", body).await?;
 
   if resp["status"].as_str() != Some("OK") {
-    return Err(anyhow!("PoW solution rejected. Reason: {:#?}", resp["status"].as_str().unwrap()));
+    return Err(anyhow!(
+      "PoW solution rejected. Reason: {:#?}",
+      resp["status"].as_str().unwrap()
+    ));
   }
 
   let success_token = resp["success_token"]

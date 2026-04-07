@@ -30,21 +30,28 @@ pub struct UserAgent
   pub chromium_based: bool,
 }
 
-fn random_major_version(rng: &mut impl Rng, major_min: u32, major_max: u32) -> u32
+fn random_major_version(
+  rng: &mut impl Rng,
+  major_min: u32,
+  major_max: u32,
+) -> u32
 {
   rng.random_range(major_min..=major_max)
 }
 
-fn random_version_browser(major: u32)
--> String
+fn random_version_browser(major: u32) -> String
 {
   format!("{}.0.0.0", major)
 }
 
-fn random_version_full_browser(rng: &mut impl Rng, major: u32)
--> String
+fn random_version_full_browser(rng: &mut impl Rng, major: u32) -> String
 {
-  format!("{}.0.{}.{}", major, rng.random_range(7000..7900), rng.random_range(100..200))
+  format!(
+    "{}.0.{}.{}",
+    major,
+    rng.random_range(7000..7900),
+    rng.random_range(100..200)
+  )
 }
 
 pub fn get_random_user_agent() -> UserAgent
@@ -93,7 +100,6 @@ pub fn get_random_user_agent() -> UserAgent
 
   let mut chromium_based = false;
 
-
   let value = match browser {
     Browser::Firefox => {
       let ff_v = rng.random_range(135..=149);
@@ -118,7 +124,11 @@ pub fn get_random_user_agent() -> UserAgent
       match browser {
         Browser::Edge => format!("{} Edg/{}", base, chrome_v),
         Browser::Opera => {
-          format!("{} OPR/{}", base, random_version_browser(random_major_version(&mut rng, 110, 112)))
+          format!(
+            "{} OPR/{}",
+            base,
+            random_version_browser(random_major_version(&mut rng, 110, 112))
+          )
         }
         Browser::YandexBrowser => format!(
           "{} YaBrowser/{} Yowser/2.5",

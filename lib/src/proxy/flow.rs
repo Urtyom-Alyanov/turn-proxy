@@ -89,9 +89,7 @@ pub fn proxy_flow(
         }
       };
 
-
       debug!("[{}] Sent {} bytes to {}", flow_name, sent_bytes, dest);
-      
     }
 
     cancellation_token.cancel();
