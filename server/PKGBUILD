@@ -1,6 +1,6 @@
 # Maintainer: Urtyom Alyanov <urtyomalynov@gmail.com>
 pkgname=turn-proxy-server-rs
-pkgver=1.0.15
+pkgver=1.0.16
 pkgrel=1
 pkgdesc="DTLS proxy server for TURN-based video call traffic relay"
 arch=('x86_64' 'aarch64')
