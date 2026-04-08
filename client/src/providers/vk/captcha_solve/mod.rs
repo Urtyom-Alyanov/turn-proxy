@@ -2,7 +2,6 @@ pub mod image_view;
 mod pow_solver;
 mod reverse_proxy;
 
-
 pub const PROXY_ADDR: &str = "127.0.0.1:8765";
 pub const IMAGE_SERVER_ADDR: &str = "127.0.0.1:8765";
 
@@ -15,7 +14,7 @@ use serde_json::{Map, Value};
 use tokio::sync::Mutex;
 
 use crate::providers::vk::captcha_solve::{
-  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge
+  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge,
 };
 
 lazy_static! {
