@@ -9,7 +9,9 @@ use reqwest::{Client, Url};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::task::spawn_blocking;
-use tracing::info;
+use tracing::{info, warn};
+
+use crate::providers::vk::captcha_solve::reverse_proxy::solve_via_reverse_proxy;
 
 /// Извлекает `session_token` из `redirect_uri`, если он там есть
 fn extract_session_token(redirect_uri: &str) -> Option<String>
@@ -126,15 +128,23 @@ pub async fn solve_pow_challenge(
 
   info!("Getted hash (solve): {}", hash);
 
-  let success_token =
-    submit_pow_solution(client, &hash, base_body.clone(), &browser_fp).await?;
+  let (success_token, is_human) = submit_pow_solution(
+    client,
+    &hash,
+    base_body.clone(),
+    &browser_fp,
+    redirect_url,
+  )
+  .await?;
 
   info!("Getted success token: {}", success_token);
 
-  let _ =
-    vk_api_request_internal(client, "captchaNotRobot.endSession", base_body)
-      .await;
-  info!("Gracefully ending PoW session...");
+  if is_human {
+    let _ =
+      vk_api_request_internal(client, "captchaNotRobot.endSession", base_body)
+        .await;
+    info!("Gracefully ending PoW session...");
+  }
 
   Ok(success_token)
 }
@@ -235,12 +245,15 @@ fn random_count() -> usize
 }
 
 /// Отправляет решение PoW задачи на сервер и получает токен успеха
+///
+/// Первый объект в результате - токен, второй - ручной ли ввод
 async fn submit_pow_solution(
   client: &Client,
   hash: &str,
   base_body: HashMap<String, String>,
   browser_fp: &str,
-) -> Result<String>
+  redirect_url: &str,
+) -> Result<(String, bool)>
 {
   let count = random_count();
 
@@ -278,10 +291,17 @@ async fn submit_pow_solution(
     vk_api_request_internal(client, "captchaNotRobot.check", body).await?;
 
   if resp["status"].as_str() != Some("OK") {
-    return Err(anyhow!(
-      "PoW solution rejected. Reason: {:#?}",
-      resp["status"].as_str().unwrap()
-    ));
+    warn!("PoW solver has ben rejected! Trying manual solving...");
+    let token = solve_via_reverse_proxy(client, redirect_url).await?;
+
+    if token.is_empty() {
+      return Err(anyhow!(
+        "PoW solution rejected. Reason: {:#?}",
+        resp["status"].as_str().unwrap()
+      ));
+    }
+
+    return Ok((token, true));
   }
 
   let success_token = resp["success_token"]
@@ -289,7 +309,7 @@ async fn submit_pow_solution(
     .ok_or_else(|| anyhow!("No success_token in response"))?
     .to_owned();
 
-  Ok(success_token)
+  Ok((success_token, false))
 }
 
 /// Cоздаёт окружение для решения PoW задачи, вызывая необходимые методы VK API,
