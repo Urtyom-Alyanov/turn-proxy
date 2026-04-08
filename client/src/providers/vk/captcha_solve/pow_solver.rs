@@ -128,16 +128,18 @@ pub async fn solve_pow_challenge(
 
   info!("Getted hash (solve): {}", hash);
 
-  let success_token =
+  let (success_token, is_human) =
     submit_pow_solution(client, &hash, base_body.clone(), &browser_fp, redirect_url).await?;
 
   info!("Getted success token: {}", success_token);
 
-  let _ =
+  if is_human {
+    let _ =
     vk_api_request_internal(client, "captchaNotRobot.endSession", base_body)
       .await;
-  info!("Gracefully ending PoW session...");
-
+    info!("Gracefully ending PoW session...");
+  }
+  
   Ok(success_token)
 }
 
@@ -237,13 +239,15 @@ fn random_count() -> usize
 }
 
 /// Отправляет решение PoW задачи на сервер и получает токен успеха
+/// 
+/// Первый объект в результате - токен, второй - ручной ли ввод
 async fn submit_pow_solution(
   client: &Client,
   hash: &str,
   base_body: HashMap<String, String>,
   browser_fp: &str,
   redirect_url: &str,
-) -> Result<String>
+) -> Result<(String, bool)>
 {
   let count = random_count();
 
@@ -281,12 +285,16 @@ async fn submit_pow_solution(
     vk_api_request_internal(client, "captchaNotRobot.check", body).await?;
 
   if resp["status"].as_str() != Some("OK") {
-    solve_via_reverse_proxy(client, redirect_url).await?;
+    let token = solve_via_reverse_proxy(client, redirect_url).await?;
 
-    return Err(anyhow!(
-      "PoW solution rejected. Reason: {:#?}",
-      resp["status"].as_str().unwrap()
-    ));
+    if token.is_empty() {
+      return Err(anyhow!(
+        "PoW solution rejected. Reason: {:#?}",
+        resp["status"].as_str().unwrap()
+      ));
+    }
+    
+    return Ok((token, true));
   }
 
   let success_token = resp["success_token"]
@@ -294,7 +302,7 @@ async fn submit_pow_solution(
     .ok_or_else(|| anyhow!("No success_token in response"))?
     .to_owned();
 
-  Ok(success_token)
+  Ok((success_token, false))
 }
 
 /// Cоздаёт окружение для решения PoW задачи, вызывая необходимые методы VK API,

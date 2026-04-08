@@ -1,9 +1,8 @@
-﻿<script>
-(function() {
+﻿(function() {
   function rewriteUrl(urlStr) {
     if (!urlStr || typeof urlStr !== 'string') return urlStr;
     if (urlStr.indexOf('http://') === 0 || urlStr.indexOf('https://') === 0) {
-      return '/generic_proxy?proxy_url=' + encodeURIComponent(urlStr);
+      return '/request?target=' + encodeURIComponent(urlStr);
     }
     return urlStr;
   }
@@ -24,7 +23,7 @@
       try {
         var data = JSON.parse(xhr.responseText);
         if (data.response && data.response.success_token) {
-          fetch('/local-captcha-result', {
+          fetch('/submit', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ token: data.response.success_token })
@@ -48,7 +47,7 @@
         var clone = response.clone();
         clone.json().then(function(data) {
           if (data.response && data.response.success_token) {
-            origFetch('/local-captcha-result', {
+            origFetch('/submit', {
               method: 'POST',
               headers: {'Content-Type': 'application/json'},
               body: JSON.stringify({ token: data.response.success_token })
@@ -60,4 +59,3 @@
     };
   }
 })();
-</script>

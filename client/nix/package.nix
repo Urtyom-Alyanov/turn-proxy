@@ -10,6 +10,7 @@ let
       (baseName == "Cargo.toml" || baseName == "Cargo.lock") ||
       (lib.hasSuffix ".rs" baseName) ||
       (lib.hasSuffix ".html" baseName) ||
+      (lib.hasSuffix ".js" baseName) ||
       (baseName == "rustfmt.toml");
   };
 in

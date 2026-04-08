@@ -32,7 +32,7 @@ async-trait = "0.1.89"
 hickory-resolver = "0.25.2"
 network-interface = "2.0.5"
 net-route = "0.4.6"
-axum = "0.8.8"
+axum = { version = "0.8.8", features = ["macros"] }
 open = "5.3.3"
 lazy_static = "1.5.0"
 regex = "1.12.3"
