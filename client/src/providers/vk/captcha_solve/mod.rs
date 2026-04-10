@@ -1,6 +1,7 @@
 pub mod image_view;
 mod pow_solver;
 mod reverse_proxy;
+mod slider_solver;
 
 pub const PROXY_ADDR: &str = "127.0.0.1:8765";
 pub const IMAGE_SERVER_ADDR: &str = "127.0.0.1:8765";
@@ -12,6 +13,7 @@ use lazy_static::lazy_static;
 use reqwest::Client;
 use serde_json::{Map, Value};
 use tokio::sync::Mutex;
+
 
 use crate::providers::vk::captcha_solve::{
   image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge,

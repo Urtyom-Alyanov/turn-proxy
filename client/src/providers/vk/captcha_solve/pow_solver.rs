@@ -1,7 +1,8 @@
 use std::{collections::HashMap, time::Duration};
 
 use anyhow::{Result, anyhow};
-use base64::{Engine, engine::general_purpose};
+use base64::{Engine, engine::general_purpose, prelude::BASE64_STANDARD};
+use image::{DynamicImage, GenericImageView as _, Rgba, load_from_memory};
 use rand::{RngExt, seq::IndexedRandom as _};
 use rayon::iter::{IntoParallelIterator as _, ParallelIterator as _};
 use regex::Regex;
@@ -9,9 +10,11 @@ use reqwest::{Client, Url};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::task::spawn_blocking;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 use crate::providers::vk::captcha_solve::reverse_proxy::solve_via_reverse_proxy;
+
+const DEBUG_INFO: &str = "1d3e9babfd3a74f4588bf90cf5c30d3e8e89a0e2a4544da8de8bbf4d78a32f5c";
 
 /// Извлекает `session_token` из `redirect_uri`, если он там есть
 fn extract_session_token(redirect_uri: &str) -> Option<String>
@@ -90,6 +93,147 @@ fn generate_random_cursor(steps: usize) -> String
   serde_json::to_string(&points).unwrap_or_else(|_| "[]".to_string())
 }
 
+/// Получает URL картинки с сервера ВК (ссылка base64)
+async fn fetch_picture(
+  client: &Client,
+  picture_id: &str,
+  session_token: &str,
+  access_token: Option<&str>
+) -> Result<DynamicImage>
+{
+  let method_body = HashMap::from([
+    ("captcha_settings".to_owned(), picture_id.to_owned()),
+    ("session_token".to_owned(), session_token.to_owned()),
+    ("domain".to_owned(), "vk.com".to_owned()),
+    ("adFp".to_owned(), "".to_owned()),
+    (
+      "access_token".to_owned(),
+      access_token.unwrap_or("").to_owned(),
+    ),
+  ]);
+
+  let body = vk_api_request_internal(client, "captchaNotRobot.getContent", method_body).await?;
+  let content = body["image"].as_str().ok_or(anyhow!("Can't resolve image content for captcha"))?;
+  let extension = body["extension"].as_str().ok_or(anyhow!("Can't resolve image extension for captcha"))?;
+  
+  info!("Fetched image captcha challenge");
+  debug!("Base64 URL: data:image/{};base64,{}", extension, content);
+
+  let image_bytes = BASE64_STANDARD
+    .decode(content.trim())
+    .map_err(|e| anyhow!("Decode Base64 error: {}", e))?;
+
+  let img = load_from_memory(&image_bytes)
+    .map_err(|e| anyhow!("Loading image buffer into image type: {}", e))?;
+
+  Ok(img)
+}
+
+#[derive(Debug)]
+pub struct SliderCandidate {
+    pub index: usize,
+    pub active_steps: Vec<i32>,
+    pub score: u64,
+}
+
+/// Вычисляет разницу между двумя пикселями (R+G+B)
+fn pixel_diff(p1: Rgba<u8>, p2: Rgba<u8>) -> u64 {
+    let r_diff = (p1[0] as i32 - p2[0] as i32).abs() as u64;
+    let g_diff = (p1[1] as i32 - p2[1] as i32).abs() as u64;
+    let b_diff = (p1[2] as i32 - p2[2] as i32).abs() as u64;
+    r_diff + g_diff + b_diff
+}
+
+/// Считает "плохость" границ при текущем маппинге тайлов
+fn score_mapping(img: &image::DynamicImage, grid_size: usize, mapping: &[usize]) -> u64 {
+  let (width, height) = img.dimensions();
+  let tile_w = width / grid_size as u32;
+  let tile_h = height / grid_size as u32;
+  let mut total_score = 0u64;
+
+  // Функция получения координат пикселя с учетом перемешанных тайлов
+  let get_pixel = |target_tile_idx: usize, local_x: u32, local_y: u32| {
+    let source_tile_idx = mapping[target_tile_idx];
+    let src_col = (source_tile_idx % grid_size) as u32;
+    let src_row = (source_tile_idx / grid_size) as u32;
+    img.get_pixel(src_col * tile_w + local_x, src_row * tile_h + local_y)
+  };
+
+  for row in 0..grid_size {
+    for col in 0..grid_size {
+      let current_tile = row * grid_size + col;
+
+      // Проверяем правую границу тайла (с левой границей соседа справа)
+      if col < grid_size - 1 {
+        let next_tile = current_tile + 1;
+        for y in 0..tile_h {
+          let p_left = get_pixel(current_tile, tile_w - 1, y);
+          let p_right = get_pixel(next_tile, 0, y);
+          total_score += pixel_diff(p_left, p_right);
+        }
+      }
+
+      // Проверяем нижнюю границу тайла (с верхней границей соседа снизу)
+      if row < grid_size - 1 {
+        let bottom_tile = current_tile + grid_size;
+        for x in 0..tile_w {
+          let p_top = get_pixel(current_tile, x, tile_h - 1);
+          let p_bottom = get_pixel(bottom_tile, x, 0);
+          total_score += pixel_diff(p_top, p_bottom);
+        }
+      }
+    }
+  }
+  total_score
+}
+
+/// Главная функция ранжирования
+pub fn rank_candidates(
+    img_bytes: &[u8],
+    grid_size: usize,
+    swaps: &[i32],
+) -> anyhow::Result<Vec<SliderCandidate>> {
+    let img = image::load_from_memory(img_bytes)?;
+    let tile_count = grid_size * grid_size;
+    let candidate_count = swaps.len() / 2;
+
+    let mut candidates = Vec::new();
+
+    let mut current_mapping: Vec<usize> = (0..tile_count).collect();
+
+    for i in 1..=candidate_count {
+        let idx1 = swaps[(i - 1) * 2] as usize;
+        let idx2 = swaps[(i - 1) * 2 + 1] as usize;
+        current_mapping.swap(idx1, idx2);
+
+        let score = score_mapping(&img, grid_size, &current_mapping);
+        
+        candidates.push(SliderCandidate {
+            index: i,
+            active_steps: swaps[0..(i * 2)].to_vec(),
+            score,
+        });
+    }
+
+    candidates.sort_by_key(|c| c.score);
+    Ok(candidates)
+}
+
+/// Решение задачи со слайдером путём поиска стыков
+async fn solve_picture(
+  client: &Client,
+  picture_id: &str,
+  session_token: &str,
+  access_token: Option<&str>
+) -> Result<String>
+{
+  let image_buffer = fetch_picture(client, picture_id, session_token, access_token).await?;
+
+
+
+  Ok(String::new())
+}
+
 /// Решает PoW задачу, предоставленную ВК, и получает `success_token`, который
 /// можно использовать для обхода капчи.
 pub async fn solve_pow_challenge(
@@ -109,7 +253,7 @@ pub async fn solve_pow_challenge(
     session_token
   );
 
-  let (pow_input, difficulty) =
+  let (pow_input, difficulty, captcha_image_id) =
     fetch_pow_challenge(client, redirect_url).await?;
 
   info!("Getted input and difficulty: {}, {}", pow_input, difficulty);
@@ -117,8 +261,13 @@ pub async fn solve_pow_challenge(
   let hash_handle = spawn_blocking(move || solve_pow(&pow_input, difficulty));
 
   let browser_fp = format!("{:032x}", rand::random::<u64>());
+  
+  let _: Option<String> = match captcha_image_id {
+    Some(image_id) => Some(solve_picture(client, &image_id, session_token, access_token).await?),
+    None => None
+  };
 
-  let (hash_handler, base_body_handler) = tokio::join!(
+  let (hash_handler, base_body_handler,) = tokio::join!(
     hash_handle,
     create_pow_environment(client, session_token, access_token, &browser_fp)
   );
@@ -150,10 +299,12 @@ pub async fn solve_pow_challenge(
 }
 
 /// Извлекает из HTML страницы данные для PoW задачи
+/// 
+/// Возвращает: input, difficulty, slider_image_id
 async fn fetch_pow_challenge(
   client: &Client,
   redirect_url: &str,
-) -> Result<(String, usize)>
+) -> Result<(String, usize, Option<String>)>
 {
   let html = client.get(redirect_url).send().await?.text().await?;
 
@@ -171,7 +322,35 @@ async fn fetch_pow_challenge(
     .and_then(|m| m.as_str().parse().ok())
     .unwrap_or(2);
 
-  Ok((pow_input, difficulty))
+  let re_captcha_settings= Regex::new(r"(?s)window\.init\s*=\s*(\{.*?\});")?;
+
+  let mut slider_image_id: Option<String> = None;
+
+  if let Some(captcha_settings_string) = re_captcha_settings.captures(&html) {
+    let json_str = &captcha_settings_string[1];
+
+    if let Ok(settings_root) = serde_json::from_str::<Value>(json_str) {
+
+      let captcha_type = settings_root["data"]["show_captcha_type"]
+        .as_str().unwrap();
+
+      let captcha_settings = settings_root["data"]["captcha_settings"]
+        .as_array();
+
+      let captcha_types_settings = captcha_settings.and_then(
+        |settings_array| settings_array.iter().find(|item| item["type"] == captcha_type)
+      ).and_then(|slider_obj| slider_obj["settings"].as_str());
+
+      if captcha_type == "slider" {
+        slider_image_id = match captcha_types_settings {
+          Some(string) => Some(string.to_owned()),
+          None => None
+        };
+      }
+    }
+  }
+
+  Ok((pow_input, difficulty, slider_image_id))
 }
 
 /// Решает PoW задачу, перебирая nonce до тех пор, пока не будет найден хэш,
@@ -280,8 +459,7 @@ async fn submit_pow_solution(
     ("connectionDownlink".to_owned(), connection_downlink),
     (
       "debug_info".to_owned(),
-      "d44f534ce8deb56ba20be52e05c433309b49ee4d2a70602deeb17a1954257785"
-        .to_owned(),
+      DEBUG_INFO.to_owned(),
     ),
   ]);
 
@@ -336,12 +514,14 @@ async fn create_pow_environment(
 
   tokio::time::sleep(random_sleep()).await;
 
-  vk_api_request_internal(
+  let settings = vk_api_request_internal(
     client,
     "captchaNotRobot.settings",
     base_body.clone(),
   )
   .await?;
+  info!("Current settings: {}", settings);
+
   tokio::time::sleep(random_sleep()).await;
 
   let (cores, memories) = random_hardware_info();

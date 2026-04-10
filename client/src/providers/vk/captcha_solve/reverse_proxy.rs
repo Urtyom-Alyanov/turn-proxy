@@ -52,7 +52,7 @@ async fn run_proxy_server(
   let listener = tokio::net::TcpListener::bind(PROXY_ADDR).await?;
   info!("Opened socket at {} for reverse proxy", PROXY_ADDR);
 
-  println!("{} - Manual captcha solving", PROXY_ADDR);
+  println!("http://{} - Manual captcha solving", PROXY_ADDR);
 
   axum::serve(listener, router)
     .with_graceful_shutdown(async move {
