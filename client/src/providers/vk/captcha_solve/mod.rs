@@ -1,7 +1,7 @@
 pub mod image_view;
-mod pow_solver;
-mod reverse_proxy;
-mod slider_solver;
+// mod pow_solver;
+// mod slider_solver;
+mod redirect_url;
 
 pub const PROXY_ADDR: &str = "127.0.0.1:8765";
 pub const IMAGE_SERVER_ADDR: &str = "127.0.0.1:8765";
@@ -16,7 +16,7 @@ use tokio::sync::Mutex;
 
 
 use crate::providers::vk::captcha_solve::{
-  image_view::solve_captcha_via_image, pow_solver::solve_pow_challenge,
+  image_view::solve_captcha_via_image, redirect_url::solve_smart_captcha,
 };
 
 lazy_static! {
@@ -64,22 +64,22 @@ pub async fn solve_captcha(
     .and_then(|v| v.as_str())
     .unwrap_or("");
 
+  if let Some(ts) = err_obj.get("captcha_ts") {
+    params.insert("captcha_ts".to_owned(), ts.to_string());
+  }
+  if let Some(att) = err_obj.get("captcha_attempt") {
+    let val = att.as_i64().unwrap_or(1);
+    params.insert("captcha_attempt".to_owned(), val.to_string());
+  }
+
   if !redirect_uri.is_empty() {
     // let success_token =
     //   solve_captcha_via_proxy(redirect_uri).await?.to_string();\
 
     let success_token =
-      solve_pow_challenge(client, redirect_uri, None, None).await?;
+      solve_smart_captcha(client, redirect_uri, None).await?;
 
     params.insert("success_token".to_owned(), success_token);
-
-    if let Some(ts) = err_obj.get("captcha_ts") {
-      params.insert("captcha_ts".to_owned(), ts.to_string());
-    }
-    if let Some(att) = err_obj.get("captcha_attempt") {
-      let val = att.as_i64().unwrap_or(1);
-      params.insert("captcha_attempt".to_owned(), val.to_string());
-    }
   } else {
     let img = err_obj
       .get("captcha_img")

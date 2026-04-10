@@ -192,6 +192,8 @@ async fn captcha_user_input_handler(
 /// результат. После получения решения капчи, извлекает `session_token` и
 /// возвращает его. Этот токен можно использовать для повторной отправки запроса
 /// к VK API уже с решённой капчей.
+/// 
+/// Возвращает `success_token`
 pub async fn solve_via_reverse_proxy(
   client: &Client,
   redirect_url: &str,
