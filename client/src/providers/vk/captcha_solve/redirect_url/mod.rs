@@ -10,6 +10,7 @@ use crate::providers::vk::captcha_solve::redirect_url::{
   image_slider_solver::solve_picture,
   proof_of_work::{PowChallenge, solve_pow_async},
   submit::submit_captcha,
+  vk_api_request::method_call,
 };
 
 mod fetch; // Сама задача
@@ -18,9 +19,8 @@ mod image_slider_solver; /* Решает задачу поставленную �
                            * сопоставления стыков */
 mod proof_of_work; // Решение PoW задачи от ВК
 mod reverse_proxy; // Модуль для решения капчи вручную
-mod submit;
-mod vk_api_request; /* Модуль, чтобы делать запросы (там не обрабатывается
-                     * капча) */ // Отправка решения
+mod submit; // Отправка решения
+mod vk_api_request; // Модуль, чтобы делать запросы (там не обрабатывается капча)
 
 pub(super) const DEBUG_INFO: &str =
   "1d3e9babfd3a74f4588bf90cf5c30d3e8e89a0e2a4544da8de8bbf4d78a32f5c";
@@ -121,5 +121,10 @@ pub async fn solve_smart_captcha(
   let answer = answer_handler?;
   let base_body = base_body_handler?;
 
-  submit_captcha(client, challenge.meta, answer, base_body).await
+  let success_token =
+    submit_captcha(client, challenge.meta, answer, base_body.clone()).await?;
+
+  let _ = method_call(client, "captchaNotRobot.endSession", base_body).await;
+
+  Ok(success_token)
 }

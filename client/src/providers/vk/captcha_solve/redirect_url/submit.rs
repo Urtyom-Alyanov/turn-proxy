@@ -9,9 +9,8 @@ use crate::providers::vk::captcha_solve::redirect_url::{
   reverse_proxy::solve_via_reverse_proxy, vk_api_request::method_call,
 };
 
-/// Отправляет на сервера ВКонтукле решение и тихо, без суеты, завершает сессию
-/// капчи, если ошибка - запускает реверсивный прокси сервер
-/// Ответ - `success_token`
+/// Отправляет на сервера ВКонтукле решение тихо, без суеты, если ошибка -
+/// запускает реверсивный прокси сервер Ответ - `success_token`
 pub async fn submit_captcha(
   client: &Client,
   meta: ChallengeMeta,
