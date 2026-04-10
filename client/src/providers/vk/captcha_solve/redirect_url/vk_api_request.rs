@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Result,anyhow};
+use anyhow::{Result, anyhow};
 use reqwest::Client;
 use serde_json::Value;
 

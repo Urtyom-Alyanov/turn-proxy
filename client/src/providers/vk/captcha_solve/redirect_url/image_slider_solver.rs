@@ -1,30 +1,35 @@
 use std::collections::HashMap;
 
+use anyhow::{Result, anyhow};
 use base64::{Engine, prelude::*};
 use image::{DynamicImage, GenericImageView as _, Rgba, load_from_memory};
 use rayon::prelude::*;
 use reqwest::Client;
-use anyhow::{Result,anyhow};
 use serde_json::json;
 use tracing::{debug, info};
 
-use crate::providers::vk::captcha_solve::redirect_url::{ChallengeMeta, vk_api_request::method_call};
+use crate::providers::vk::captcha_solve::redirect_url::{
+  ChallengeMeta, vk_api_request::method_call,
+};
 
-struct SliderContent {
+struct SliderContent
+{
   image: DynamicImage,
   grid_size: i32,
-  swaps: Vec<i32>
+  swaps: Vec<i32>,
 }
 
 /// Рассчитывает разницу между двумя пикселями (RGB)
-fn pixel_diff(p1: Rgba<u8>, p2: Rgba<u8>) -> i64 {
-  (p1[0] as i64 - p2[0] as i64).abs() +
-  (p1[1] as i64 - p2[1] as i64).abs() +
-  (p1[2] as i64 - p2[2] as i64).abs()
+fn pixel_diff(p1: Rgba<u8>, p2: Rgba<u8>) -> i64
+{
+  (p1[0] as i64 - p2[0] as i64).abs()
+    + (p1[1] as i64 - p2[1] as i64).abs()
+    + (p1[2] as i64 - p2[2] as i64).abs()
 }
 
 /// Оценивает "стыковку" плиток для конкретной перестановки
-fn score_mapping(img: &DynamicImage, grid_size: i32, mapping: &[usize]) -> i64 {
+fn score_mapping(img: &DynamicImage, grid_size: i32, mapping: &[usize]) -> i64
+{
   let (width, height) = img.dimensions();
   let tile_w = width / grid_size as u32;
   let tile_h = height / grid_size as u32;
@@ -73,7 +78,7 @@ fn score_mapping(img: &DynamicImage, grid_size: i32, mapping: &[usize]) -> i64 {
 async fn fetch_picture(
   client: &Client,
   captcha_settings: &str,
-  meta: ChallengeMeta
+  meta: ChallengeMeta,
 ) -> Result<SliderContent>
 {
   let method_body = HashMap::from([
@@ -81,16 +86,18 @@ async fn fetch_picture(
     ("session_token".to_owned(), meta.session_token.clone()),
     ("domain".to_owned(), "vk.com".to_owned()),
     ("adFp".to_owned(), "".to_owned()),
-    (
-      "access_token".to_owned(),
-      meta.access_token.clone(),
-    ),
+    ("access_token".to_owned(), meta.access_token.clone()),
   ]);
 
-  let body = method_call(client, "captchaNotRobot.getContent", method_body).await?;
-  let content = body["image"].as_str().ok_or(anyhow!("Can't resolve image content for captcha"))?;
-  let extension = body["extension"].as_str().ok_or(anyhow!("Can't resolve image extension for captcha"))?;
-  
+  let body =
+    method_call(client, "captchaNotRobot.getContent", method_body).await?;
+  let content = body["image"]
+    .as_str()
+    .ok_or(anyhow!("Can't resolve image content for captcha"))?;
+  let extension = body["extension"]
+    .as_str()
+    .ok_or(anyhow!("Can't resolve image extension for captcha"))?;
+
   info!("Fetched image captcha challenge");
   debug!("Base64 URL: data:image/{};base64,{}", extension, content);
 
@@ -109,29 +116,31 @@ async fn fetch_picture(
     .iter()
     .map(|v| v.as_i64().unwrap_or(0) as i32)
     .collect();
-  
+
   if steps.len() < 3 {
     return Err(anyhow!("Slider steps payload too short"));
   }
 
   let grid_size = steps[0];
   let swaps = steps[1..].to_vec();
-  
+
   // let mut attempts = 4;
   // if swaps.len() % 2 != 0 {
   //     attempts = swaps.pop().unwrap_or(4);
   // }
 
-  Ok(
-    SliderContent { image, grid_size, swaps }
-  )
+  Ok(SliderContent {
+    image,
+    grid_size,
+    swaps,
+  })
 }
 
 /// Решение задачи со слайдером путём поиска стыков
 pub async fn solve_picture(
   client: &Client,
   picture_id: &str,
-  meta: ChallengeMeta
+  meta: ChallengeMeta,
 ) -> Result<String>
 {
   let content = fetch_picture(client, picture_id, meta).await?;
@@ -144,23 +153,27 @@ pub async fn solve_picture(
   let best_result = (1..=candidate_count)
     .into_par_iter()
     .map(|i| {
-        // Для каждого кандидата воссоздаем его состояние маппинга
-        let mut mapping: Vec<usize> = (0..tile_count).collect();
-        for step in 0..i {
-          let a = content.swaps[step * 2] as usize;
-          let b = content.swaps[step * 2 + 1] as usize;
-          mapping.swap(a, b);
-        }
-        
-        let score = score_mapping(&content.image, content.grid_size, &mapping);
-        (i, score)
+      // Для каждого кандидата воссоздаем его состояние маппинга
+      let mut mapping: Vec<usize> = (0..tile_count).collect();
+      for step in 0..i {
+        let a = content.swaps[step * 2] as usize;
+        let b = content.swaps[step * 2 + 1] as usize;
+        mapping.swap(a, b);
+      }
+
+      let score = score_mapping(&content.image, content.grid_size, &mapping);
+      (i, score)
     })
     .min_by_key(|&(_, score)| score);
 
   if let Some((best_index, score)) = best_result {
-    info!("Parallel solver found best index: {} (score: {})", best_index, score);
+    info!(
+      "Parallel solver found best index: {} (score: {})",
+      best_index, score
+    );
     let best_swaps = content.swaps[0..(best_index * 2)].to_vec();
-    let answer = BASE64_STANDARD.encode(json!({ "value": best_swaps }).to_string());
+    let answer =
+      BASE64_STANDARD.encode(json!({ "value": best_swaps }).to_string());
     Ok(answer)
   } else {
     Err(anyhow!("No candidates found"))

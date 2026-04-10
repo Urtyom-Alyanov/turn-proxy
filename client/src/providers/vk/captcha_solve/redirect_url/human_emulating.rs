@@ -6,7 +6,9 @@ use reqwest::Client;
 use serde_json::json;
 use tracing::info;
 
-use crate::providers::vk::captcha_solve::redirect_url::{ChallengeMeta, vk_api_request::method_call};
+use crate::providers::vk::captcha_solve::redirect_url::{
+  ChallengeMeta, vk_api_request::method_call,
+};
 
 /// Генерирует рандомное железо пользователя
 fn random_hardware_info() -> (u8, u8)
@@ -24,31 +26,24 @@ fn random_hardware_info() -> (u8, u8)
 /// Cоздаёт окружение для решения задачи, вызывая необходимые методы VK API,
 /// чтобы казаться "живым" пользователем
 ///
-/// Возвращает `HashMap` с `domain`, `adFp`, `session_token` и `access_token`, которые
-/// ассоциируются с решённой PoW задачей
+/// Возвращает `HashMap` с `domain`, `adFp`, `session_token` и `access_token`,
+/// которые ассоциируются с решённой PoW задачей
 pub async fn create_captcha_environment(
   client: &Client,
-  meta: &ChallengeMeta
+  meta: &ChallengeMeta,
 ) -> Result<HashMap<String, String>>
 {
   let base_body = HashMap::from([
     ("session_token".to_owned(), meta.session_token.clone()),
     ("domain".to_owned(), "vk.com".to_owned()),
     ("adFp".to_owned(), "".to_owned()),
-    (
-      "access_token".to_owned(),
-      meta.access_token.clone(),
-    ),
+    ("access_token".to_owned(), meta.access_token.clone()),
   ]);
 
   tokio::time::sleep(random_sleep()).await;
 
-  let settings = method_call(
-    client,
-    "captchaNotRobot.settings",
-    base_body.clone(),
-  )
-  .await?;
+  let settings =
+    method_call(client, "captchaNotRobot.settings", base_body.clone()).await?;
   info!("Current settings: {}", settings);
 
   tokio::time::sleep(random_sleep()).await;
@@ -75,19 +70,22 @@ pub async fn create_captcha_environment(
 
   let mut done_data = HashMap::from([
     ("device".to_owned(), device_json),
-    ("browser_fp".to_owned(), meta.metrics.browser_fingerprint.clone()),
+    (
+      "browser_fp".to_owned(),
+      meta.metrics.browser_fingerprint.clone(),
+    ),
   ]);
 
   done_data.extend(base_body.clone());
 
-  method_call(client, "captchaNotRobot.componentDone", done_data)
-    .await?;
+  method_call(client, "captchaNotRobot.componentDone", done_data).await?;
   tokio::time::sleep(random_sleep()).await;
 
   Ok(base_body)
 }
 
-/// Рангдомное количество, нужно для того, чтобы в интернет метриках и курсоре было равное количество элементов
+/// Рангдомное количество, нужно для того, чтобы в интернет метриках и курсоре
+/// было равное количество элементов
 fn random_count() -> usize
 {
   let mut rng = rand::rng();
@@ -142,7 +140,7 @@ fn cursor(steps: usize) -> String
 }
 
 /// Создаёт интернет-метрики настоящева пользувателя для ВК
-/// 
+///
 /// Возвращает rtt и downlink
 fn internet_metrics(count: usize) -> (String, String)
 {
@@ -171,7 +169,8 @@ fn internet_metrics(count: usize) -> (String, String)
 
 /// Структура с метриками как бы "реального" пользователя
 #[derive(Clone)]
-pub struct HumanMetrics {
+pub struct HumanMetrics
+{
   // Количество элементов в метриках
   // pub count: usize,
 
@@ -187,11 +186,13 @@ pub struct HumanMetrics {
   pub taps: String,
 
   // Отпечаток браузера
-  pub browser_fingerprint: String
+  pub browser_fingerprint: String,
 }
 
-impl HumanMetrics {
-  pub fn into_hashmap(&self) -> HashMap<String, String> {
+impl HumanMetrics
+{
+  pub fn into_hashmap(&self) -> HashMap<String, String>
+  {
     HashMap::from([
       ("browser_fp".to_owned(), self.browser_fingerprint.clone()),
       ("cursor".to_owned(), self.cursor.clone()),
@@ -205,7 +206,7 @@ impl HumanMetrics {
   }
 }
 
-/// Создаёт метрики с переданным или сгенерированным количеством 
+/// Создаёт метрики с переданным или сгенерированным количеством
 pub fn create_human_metrics(count: Option<usize>) -> HumanMetrics
 {
   let count = count.unwrap_or(random_count());
@@ -214,7 +215,7 @@ pub fn create_human_metrics(count: Option<usize>) -> HumanMetrics
   let (rtt, downlink) = internet_metrics(count);
 
   let browser_fingerprint = format!("{:032x}", rand::random::<u64>());
-  
+
   let empty_array_string = "[]";
 
   HumanMetrics {
@@ -233,7 +234,8 @@ pub fn create_human_metrics(count: Option<usize>) -> HumanMetrics
   }
 }
 
-/// Рандомное засыпания, чтобы запросы выполнялись с небольшим интервалом, словно блестяще медленный JS
+/// Рандомное засыпания, чтобы запросы выполнялись с небольшим интервалом,
+/// словно блестяще медленный JS
 fn random_sleep() -> Duration
 {
   Duration::from_millis(rand::rng().random_range(200..400))

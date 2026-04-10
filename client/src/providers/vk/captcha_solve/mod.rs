@@ -14,7 +14,6 @@ use reqwest::Client;
 use serde_json::{Map, Value};
 use tokio::sync::Mutex;
 
-
 use crate::providers::vk::captcha_solve::{
   image_view::solve_captcha_via_image, redirect_url::solve_smart_captcha,
 };
@@ -76,8 +75,7 @@ pub async fn solve_captcha(
     // let success_token =
     //   solve_captcha_via_proxy(redirect_uri).await?.to_string();\
 
-    let success_token =
-      solve_smart_captcha(client, redirect_uri, None).await?;
+    let success_token = solve_smart_captcha(client, redirect_uri, None).await?;
 
     params.insert("success_token".to_owned(), success_token);
   } else {

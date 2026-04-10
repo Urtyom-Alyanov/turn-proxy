@@ -1,9 +1,12 @@
+use anyhow::{Result, anyhow};
 use regex::Regex;
 use reqwest::Client;
-use anyhow::{Result,anyhow};
 use serde_json::Value;
 
-use crate::providers::vk::captcha_solve::redirect_url::{Challenge, ChallengeMeta, extract_session_token, human_emulating::create_human_metrics, proof_of_work::PowChallenge};
+use crate::providers::vk::captcha_solve::redirect_url::{
+  Challenge, ChallengeMeta, extract_session_token,
+  human_emulating::create_human_metrics, proof_of_work::PowChallenge,
+};
 
 fn extract_pow_challenge(html: &str) -> Result<PowChallenge>
 {
@@ -26,7 +29,7 @@ fn extract_pow_challenge(html: &str) -> Result<PowChallenge>
 
 fn extract_slider_challenge(html: &str) -> Result<Option<String>>
 {
-  let re_captcha_settings= Regex::new(r"(?s)window\.init\s*=\s*(\{.*?\});")?;
+  let re_captcha_settings = Regex::new(r"(?s)window\.init\s*=\s*(\{.*?\});")?;
 
   let mut slider_image_id: Option<String> = None;
 
@@ -34,21 +37,24 @@ fn extract_slider_challenge(html: &str) -> Result<Option<String>>
     let json_str = &captcha_settings_string[1];
 
     if let Ok(settings_root) = serde_json::from_str::<Value>(json_str) {
+      let captcha_type =
+        settings_root["data"]["show_captcha_type"].as_str().unwrap();
 
-      let captcha_type = settings_root["data"]["show_captcha_type"]
-        .as_str().unwrap();
+      let captcha_settings =
+        settings_root["data"]["captcha_settings"].as_array();
 
-      let captcha_settings = settings_root["data"]["captcha_settings"]
-        .as_array();
-
-      let captcha_types_settings = captcha_settings.and_then(
-        |settings_array| settings_array.iter().find(|item| item["type"] == captcha_type)
-      ).and_then(|slider_obj| slider_obj["settings"].as_str());
+      let captcha_types_settings = captcha_settings
+        .and_then(|settings_array| {
+          settings_array
+            .iter()
+            .find(|item| item["type"] == captcha_type)
+        })
+        .and_then(|slider_obj| slider_obj["settings"].as_str());
 
       if captcha_type == "slider" {
         slider_image_id = match captcha_types_settings {
           Some(string) => Some(string.to_owned()),
-          None => None
+          None => None,
         };
       }
     }
@@ -61,10 +67,11 @@ fn extract_slider_challenge(html: &str) -> Result<Option<String>>
 pub async fn fetch_challenge(
   client: &Client,
   redirect_url: &str,
-  access_token: Option<&str>
+  access_token: Option<&str>,
 ) -> Result<Challenge>
 {
-  let session_token = extract_session_token(redirect_url).ok_or(anyhow!("`session_token` has not defined"))?;
+  let session_token = extract_session_token(redirect_url)
+    .ok_or(anyhow!("`session_token` has not defined"))?;
 
   let metrics = create_human_metrics(None);
 
@@ -72,7 +79,7 @@ pub async fn fetch_challenge(
     session_token,
     access_token: access_token.unwrap_or("").to_owned(),
     metrics,
-    redirect_url: redirect_url.to_owned()
+    redirect_url: redirect_url.to_owned(),
   };
 
   let html = client.get(redirect_url).send().await?.text().await?;
@@ -80,7 +87,9 @@ pub async fn fetch_challenge(
   let proof_of_work = extract_pow_challenge(&html)?;
   let slider_settings = extract_slider_challenge(&html)?;
 
-  Ok(
-    Challenge { meta, proof_of_work, slider_settings }
-  )
+  Ok(Challenge {
+    meta,
+    proof_of_work,
+    slider_settings,
+  })
 }

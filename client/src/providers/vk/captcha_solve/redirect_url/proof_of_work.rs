@@ -1,13 +1,14 @@
+use anyhow::{Result, anyhow};
 use rayon::prelude::*;
 use sha2::{Digest as _, Sha256};
-use anyhow::{Result,anyhow};
 use tokio::task::{JoinHandle, spawn_blocking};
 
 /// Задача для поиска хеша
 #[derive(Clone)]
-pub struct PowChallenge {
+pub struct PowChallenge
+{
   pub input: String,
-  pub difficulty: usize
+  pub difficulty: usize,
 }
 
 /// Решает PoW задачу, перебирая nonce до тех пор, пока не будет найден хэш,
