@@ -15,8 +15,8 @@ use crate::providers::vk::captcha_solve::redirect_url::{
 
 mod fetch; // Сама задача
 mod human_emulating; // Создаёт окружение "живого" пользователя для ВК
-mod image_slider_solver; /* Решает задачу поставленную пользователю путём
-                           * сопоставления стыков */
+mod image_slider_solver; // Решает задачу поставленную пользователю путём
+// сопоставления стыков
 mod proof_of_work; // Решение PoW задачи от ВК
 mod reverse_proxy; // Модуль для решения капчи вручную
 mod submit; // Отправка решения
