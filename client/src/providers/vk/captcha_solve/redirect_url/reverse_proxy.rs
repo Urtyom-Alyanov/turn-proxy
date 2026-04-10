@@ -52,7 +52,7 @@ async fn run_proxy_server(
   let listener = tokio::net::TcpListener::bind(PROXY_ADDR).await?;
   info!("Opened socket at {} for reverse proxy", PROXY_ADDR);
 
-  println!("{} - Manual captcha solving", PROXY_ADDR);
+  println!("http://{} - Manual captcha solving", PROXY_ADDR);
 
   axum::serve(listener, router)
     .with_graceful_shutdown(async move {
@@ -192,6 +192,8 @@ async fn captcha_user_input_handler(
 /// результат. После получения решения капчи, извлекает `session_token` и
 /// возвращает его. Этот токен можно использовать для повторной отправки запроса
 /// к VK API уже с решённой капчей.
+///
+/// Возвращает `success_token`
 pub async fn solve_via_reverse_proxy(
   client: &Client,
   redirect_url: &str,

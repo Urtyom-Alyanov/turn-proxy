@@ -43,6 +43,7 @@ rand = "0.10.0"
 base64 = "0.22.1"
 oneshot = "0.2.1"
 rayon = "1.11.0"
+image = "0.25.10"
 
 [package.metadata.deb]
 maintainer = "Urtyom Alyanov <urtyomalyanov@gmail.com>"
