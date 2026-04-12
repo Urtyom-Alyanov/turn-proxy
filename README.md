@@ -7,6 +7,10 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Urtyom-Alyanov/turn-proxy/build.yml?style=for-the-badge&label=Builds)
 ![Last Commit](https://img.shields.io/github/last-commit/Urtyom-Alyanov/turn-proxy?style=for-the-badge&logo=git&logoColor=FFFFFF)
 
+## TCP трафик
+
+Данная реализация не поддерживает на данный момент TCP протоколы типа VLess, оно может проксировать только UDP трафик, однако работы уже ведутся, но гарантировать то, что реализация TCP поверх DTLS с мультиплексированием **не могу**. Спасибо, что интересуетесь проектом, всем счастливой пасхи!
+
 ## Отказ от ответственности (дисклеймер)
 
 Данный проект является исследовательским, автор не несёт ответственности за использование его трудов для обхода
