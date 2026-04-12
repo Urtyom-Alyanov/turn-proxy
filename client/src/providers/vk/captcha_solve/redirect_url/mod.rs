@@ -105,6 +105,7 @@ async fn get_captcha_answer(
   })
 }
 
+/// Решает супербыстро умную капчу от ВК
 pub async fn solve_smart_captcha(
   client: &Client,
   redirect_url: &str,
