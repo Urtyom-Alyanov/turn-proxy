@@ -3,10 +3,10 @@ members = ["server", "client", "lib"]
 resolver = "2"
 
 [workspace.package]
-version = "1.0.17"
+version = "1.1.0"
 edition = "2024"
 license = "AGPL-3"
-repository = "https://github.com/Urtyom-Alyanov/turn-proxy-server"
+repository = "https://github.com/Urtyom-Alyanov/turn-proxy"
 authors = ["Urtyom Alyanov"]
 
 [workspace.dependencies]
@@ -24,6 +24,8 @@ webrtc-util = { version = "0.17.1", features = ["conn"] }
 tokio-util = "0.7.18"
 turn-proxy-lib = { path = "lib" }
 futures-util = "0.3.32"
+kcp = "0.6.0"
+yamux = "0.13.10"
 
 [profile.dist]
 inherits = "release"
