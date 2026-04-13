@@ -1,7 +1,6 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use anyhow::{Result, anyhow};
-use bytes::BytesMut;
 use tokio::{sync::RwLock, task::JoinHandle};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
@@ -25,7 +24,7 @@ pub fn proxy_flow(
 ) -> JoinHandle<Result<()>>
 {
   tokio::spawn(async move {
-    let mut buf = BytesMut::with_capacity(4096);
+    let mut buf = [0u8; 65535];
 
     loop {
       let recv_future = from_flow.recv_from(&mut buf);
@@ -63,25 +62,28 @@ pub fn proxy_flow(
       }
 
       if let Some(cache) = &from_cache {
-        *cache.write().await = Some(src);
+        let mut cache_guard = cache.write().await;
+        if *cache_guard != Some(src) {
+          *cache_guard = Some(src);
+        }
       }
 
       debug!("[{}] Received {} bytes from {}", flow_name, n, src);
 
-      if n >= buf.capacity() {
+      if n >= buf.len() {
         warn!(
-          "[{}] Packet from {} is too large for allocator (size: {} bytes)",
+          "[{}] Packet from {} is too large for buffer ({})",
           flow_name, src, n
         );
       }
 
-      let data = buf.split_to(n).freeze();
+      let data = &buf[..n];
 
       let (send, dest) = if let Some(cache) = &to_cache {
         let dest = cache.read().await.unwrap_or(to_addr);
-        (to_flow.send_to(&data, dest), dest)
+        (to_flow.send_to(data, dest), dest)
       } else {
-        (to_flow.send(&data), to_addr)
+        (to_flow.send(data), to_addr)
       };
 
       let sent_bytes = match send.await {
