@@ -14,3 +14,4 @@ webrtc-util.workspace = true
 tracing.workspace = true
 anyhow.workspace = true
 futures-util.workspace = true
+bytes = "1.0"
