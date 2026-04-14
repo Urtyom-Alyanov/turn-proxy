@@ -6,6 +6,8 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 use webrtc_util::Conn;
 
+use crate::UDP_MTU;
+
 /// Низкоуровневая абстракция
 pub fn proxy_flow(
   flow_name: String,
@@ -24,7 +26,7 @@ pub fn proxy_flow(
 ) -> JoinHandle<Result<()>>
 {
   tokio::spawn(async move {
-    let mut buf = [0u8; 2048];
+    let mut buf = [0u8; UDP_MTU];
 
     loop {
       let recv_future = from_flow.recv_from(&mut buf);
@@ -62,7 +64,10 @@ pub fn proxy_flow(
       }
 
       if let Some(cache) = &from_cache {
-        *cache.write().await = Some(src);
+        let mut cache_guard = cache.write().await;
+        if *cache_guard != Some(src) {
+          *cache_guard = Some(src);
+        }
       }
 
       debug!("[{}] Received {} bytes from {}", flow_name, n, src);
@@ -74,11 +79,13 @@ pub fn proxy_flow(
         );
       }
 
+      let data = &buf[..n];
+
       let (send, dest) = if let Some(cache) = &to_cache {
         let dest = cache.read().await.unwrap_or(to_addr);
-        (to_flow.send_to(&buf[..n], dest), dest)
+        (to_flow.send_to(data, dest), dest)
       } else {
-        (to_flow.send(&buf[..n]), to_addr)
+        (to_flow.send(data), to_addr)
       };
 
       let sent_bytes = match send.await {

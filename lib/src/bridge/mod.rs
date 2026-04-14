@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 use tokio_util::sync::CancellationToken;
 use webrtc_util::Conn;
 
-use crate::proxy::bridge::ProxyBridge;
+use crate::bridge::bridge::ProxyBridge;
 
 pub mod bridge;
 mod flow;

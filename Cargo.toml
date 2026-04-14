@@ -3,10 +3,10 @@ members = ["server", "client", "lib"]
 resolver = "2"
 
 [workspace.package]
-version = "1.0.17"
+version = "1.0.18"
 edition = "2024"
 license = "AGPL-3"
-repository = "https://github.com/Urtyom-Alyanov/turn-proxy-server"
+repository = "https://github.com/Urtyom-Alyanov/turn-proxy"
 authors = ["Urtyom Alyanov"]
 
 [workspace.dependencies]

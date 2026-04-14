@@ -1,2 +1,5 @@
+pub mod balancer;
+pub mod bridge;
 pub mod configuration;
-pub mod proxy;
+
+pub const UDP_MTU: usize = 4096;
