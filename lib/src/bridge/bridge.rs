@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 use webrtc_util::Conn;
 
-use crate::proxy::flow::proxy_flow;
+use super::flow::proxy_flow;
 
 pub struct ProxyBridge
 {

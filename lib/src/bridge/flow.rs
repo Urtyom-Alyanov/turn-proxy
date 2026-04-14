@@ -6,6 +6,8 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, info, warn};
 use webrtc_util::Conn;
 
+use crate::UDP_MTU;
+
 /// Низкоуровневая абстракция
 pub fn proxy_flow(
   flow_name: String,
@@ -24,7 +26,7 @@ pub fn proxy_flow(
 ) -> JoinHandle<Result<()>>
 {
   tokio::spawn(async move {
-    let mut buf = [0u8; 65535];
+    let mut buf = [0u8; UDP_MTU];
 
     loop {
       let recv_future = from_flow.recv_from(&mut buf);

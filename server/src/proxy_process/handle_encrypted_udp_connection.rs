@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use tokio::net::UdpSocket;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error};
-use turn_proxy_lib::proxy::run_proxy_bridge;
+use turn_proxy_lib::bridge::run_proxy_bridge;
 use webrtc_util::Conn;
 
 pub async fn handle_encrypted_udp_connection(
