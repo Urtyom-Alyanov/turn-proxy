@@ -1,3 +1,0 @@
-#! /usr/bin/sh
-systemctl stop turn-proxy-server || true
-systemctl disable turn-proxy-server || true

@@ -1,3 +1,0 @@
-#! /usr/bin/sh
-systemctl daemon-reload
-systemctl try-restart turn-proxy-server

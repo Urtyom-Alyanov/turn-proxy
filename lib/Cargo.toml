@@ -1,23 +1,8 @@
-
 [package]
-name = "turn-proxy-lib"
+name = "lib"
 version.workspace = true
 edition.workspace = true
+repository.workspace = true
 authors.workspace = true
-license.workspace = true
 
 [dependencies]
-serde.workspace = true
-tokio.workspace = true
-tokio-util.workspace = true
-webrtc-util.workspace = true
-tracing.workspace = true
-anyhow.workspace = true
-futures-util.workspace = true
-
-tokio_kcp = "0.9.8"
-async-trait = "0.1.89"
-bytes = "1.11.1"
-parking_lot = "0.12.5"
-arc-swap = "1.9.1"
-flume = "0.12.0"
