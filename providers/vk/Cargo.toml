@@ -1,0 +1,8 @@
+[package]
+name = "providers_vk"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
