@@ -6,3 +6,6 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+bitflags = "2.13.1"
+bytes = "1.12.1"
+thiserror.workspace = true

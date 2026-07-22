@@ -1,5 +1,5 @@
 [workspace]
-members = ["client/app", "client/config","lib", "providers/direct", "providers/vk", "transports/socks"]
+members = ["client/app", "client/config","lib", "providers/direct", "providers/vk"]
 resolver = "2"
 
 [workspace.package]
@@ -9,6 +9,7 @@ repository = "https://github.com/Urtyom-Alyanov/turn-proxy"
 authors = ["Urtyom Alyanov"]
 
 [workspace.dependencies]
+thiserror = "2.0.19"
 
 [profile.dist]
 inherits = "release"
