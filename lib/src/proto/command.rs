@@ -19,7 +19,7 @@ pub enum Command {
     UdpAssociate = 0x20,
     UdpAssociateResult = 0x21,
     UdpData = 0x22,
-    UdpTermanate = 0x23,
+    UdpTerminate = 0x23,
 }
 
 impl TryFrom<u8> for Command {
@@ -40,7 +40,7 @@ impl TryFrom<u8> for Command {
             0x20 => Ok(Self::UdpAssociate),
             0x21 => Ok(Self::UdpAssociateResult),
             0x22 => Ok(Self::UdpData),
-            0x23 => Ok(Self::UdpTermanate),
+            0x23 => Ok(Self::UdpTerminate),
 
             cmd => Err(ProtocolError::UnknownCommand(cmd)),
         }

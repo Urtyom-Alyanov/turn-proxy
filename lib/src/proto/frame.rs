@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-use crate::proto::{MAGIC_BYTE, command::Command, error::ProtocolError};
+use crate::proto::{HEADER_SIZE, MAGIC_BYTE, command::Command, error::ProtocolError};
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -12,6 +12,7 @@ bitflags::bitflags! {
     }
 }
 
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Version {
     First = 0x00,
@@ -81,7 +82,8 @@ impl Frame {
     }
 
     pub fn encode(&self, padding_generator: fn(padding_len: usize) -> Bytes) -> Bytes {
-        let mut byt = BytesMut::new();
+        let mut byt =
+            BytesMut::with_capacity(HEADER_SIZE + self.padding_length + self.payload.len());
 
         let payload_length = self.payload.len();
         let padding = padding_generator(self.padding_length);
@@ -119,6 +121,10 @@ impl Frame {
             return Ok(None);
         }
 
+        if src.remaining() < HEADER_SIZE {
+            return Ok(None);
+        }
+
         // HEADER
         Self::verify_magic(src)?;
         let version_byte = src.get_u8();
@@ -136,6 +142,9 @@ impl Frame {
         let flags = FrameFlags::from_bits_retain(flags_bits);
 
         // PAYLOAD
+        if src.remaining() < payload_length + padding_length {
+            return Ok(None);
+        }
         let payload = src.copy_to_bytes(payload_length);
         let _padding = src.copy_to_bytes(padding_length);
 
