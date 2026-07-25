@@ -5,10 +5,10 @@ use crate::proto::{MAGIC_BYTE, command::Command, error::ProtocolError};
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     pub struct FrameFlags: u16 {
-        const FIN           = 0b000_001;
-        const COMPRESSED    = 0b000_010;
-        const FRAGMENTED    = 0b000_100;
-        const URGENT        = 0b001_000;
+        const FIN           = 0b0000_0000_0000_0001;
+        const COMPRESSED    = 0b0000_0000_0000_0010;
+        const FRAGMENTED    = 0b0000_0000_0000_0100;
+        const URGENT        = 0b0000_0000_0000_1000;
     }
 }
 
