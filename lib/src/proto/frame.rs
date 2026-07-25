@@ -1,6 +1,6 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
-use crate::proto::{HEADER_SIZE, MAGIC_BYTE, command::Command, error::ProtocolError};
+use crate::proto::{MAGIC_BYTE, command::Command, error::ProtocolError};
 
 bitflags::bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -8,24 +8,65 @@ bitflags::bitflags! {
         const FIN           = 0b000_001;
         const COMPRESSED    = 0b000_010;
         const FRAGMENTED    = 0b000_100;
+        const URGENT        = 0b001_000;
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Version {
+    First = 0x00,
+}
+
+impl TryFrom<u8> for Version {
+    type Error = ProtocolError;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(Self::First),
+            ver => Err(ProtocolError::UnknownVersion(ver)),
+        }
+    }
+}
+
+/// A protocol frame
+/// ```
+/// 0                   1                   2                   3
+/// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+/// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// |   Magic Byte  |    Version    |    Command    |    Reserved   |
+/// |     (0x67)    |    (1 byte)   |    (1 byte)   |     (0x00)    |
+/// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// |           Stream ID           |       Payload Length (N)      |
+/// |           (2 bytes)           |           (2 bytes)           |
+/// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// |       Padding Length (L)      |          Frame Flags          |
+/// |           (2 bytes)           |           (2 bytes)           |
+/// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// |                       Payload (N bytes)                       |
+/// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// |                       Padding (L bytes)                       |
+/// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Frame {
-    pub command: Command,
-    pub stream_id: u16,
-    pub flags: FrameFlags,
-    pub payload: Bytes,
+    version: Version,
+    command: Command,
+
+    stream_id: u16,
+    padding_length: usize,
+    payload: Bytes,
+    flags: FrameFlags,
 }
 
 impl Frame {
-    fn new(command: Command, stream_id: u16, payload: Bytes) -> Self {
+    pub fn new(version: Version, command: Command, stream_id: u16, payload: Bytes) -> Self {
         Self {
+            version,
             command,
             stream_id,
-            flags: FrameFlags::empty(),
             payload,
+            padding_length: 0usize,
+            flags: FrameFlags::empty(),
         }
     }
 
@@ -34,49 +75,77 @@ impl Frame {
         self
     }
 
-    pub fn encode(&self) -> Bytes {
-        let payload_len = self.payload.len();
-        let mut buf = BytesMut::with_capacity(payload_len + HEADER_SIZE);
-
-        buf.put_u8(MAGIC_BYTE);
-        buf.put_u8(self.command as u8);
-        buf.put_u16(self.stream_id);
-        buf.put_u16(payload_len as u16);
-        buf.put_u16(self.flags.bits());
-        buf.put_slice(&self.payload);
-
-        buf.freeze()
+    pub fn with_padding(mut self, padding_length: usize) -> Self {
+        self.padding_length = padding_length;
+        self
     }
 
-    pub fn decode(src: &mut Bytes) -> Result<Option<Self>, ProtocolError> {
-        if src.len() < HEADER_SIZE {
+    pub fn encode(&self, padding_generator: fn(padding_len: usize) -> Bytes) -> Bytes {
+        let mut byt = BytesMut::new();
+
+        let payload_length = self.payload.len();
+        let padding = padding_generator(self.padding_length);
+
+        // HEADER
+        byt.put_u8(MAGIC_BYTE);
+        byt.put_u8(self.version as u8);
+        byt.put_u8(self.command as u8);
+        byt.put_u8(0u8); // Reserved
+
+        byt.put_u16(self.stream_id);
+        byt.put_u16(payload_length as u16);
+
+        byt.put_u16(self.padding_length as u16);
+        byt.put_u16(self.flags.bits());
+
+        // PAYLOAD
+        byt.put_slice(&self.payload);
+        byt.put_slice(&padding);
+
+        byt.freeze()
+    }
+
+    fn verify_magic(byt: &mut impl Buf) -> Result<(), ProtocolError> {
+        let magic = byt.get_u8();
+        if magic != MAGIC_BYTE {
+            return Err(ProtocolError::MagicIncorrect(magic));
+        }
+        Ok(())
+    }
+
+    /// Decode the frame from buffer
+    pub fn decode<BufImpl: Buf>(src: &mut BufImpl) -> Result<Option<Self>, ProtocolError> {
+        if !src.has_remaining() {
             return Ok(None);
         }
 
-        if src[0] != MAGIC_BYTE {
-            return Err(ProtocolError::MagicIncorrect(src[0]));
-        }
+        // HEADER
+        Self::verify_magic(src)?;
+        let version_byte = src.get_u8();
+        let command_byte = src.get_u8();
+        let _reserved = src.get_u8();
 
-        let command = Command::try_from(src[1])?;
-        let stream_id = u16::from_be_bytes([src[2], src[3]]);
-        let payload_len = u16::from_be_bytes([src[4], src[5]]) as usize;
-        let flags_bits = u16::from_be_bytes([src[6], src[7]]);
-        let flags = FrameFlags::from_bits_truncate(flags_bits);
+        let stream_id = src.get_u16();
+        let payload_length = src.get_u16() as usize;
 
-        let total_size = HEADER_SIZE + payload_len;
+        let padding_length = src.get_u16() as usize;
+        let flags_bits = src.get_u16();
 
-        if src.len() < total_size {
-            return Ok(None);
-        }
+        let version = Version::try_from(version_byte)?;
+        let command = Command::try_from(command_byte)?;
+        let flags = FrameFlags::from_bits_retain(flags_bits);
 
-        src.advance(HEADER_SIZE);
-        let payload = src.split_to(payload_len);
+        // PAYLOAD
+        let payload = src.copy_to_bytes(payload_length);
+        let _padding = src.copy_to_bytes(padding_length);
 
         Ok(Some(Self {
+            version,
             command,
             stream_id,
-            flags,
+            padding_length,
             payload,
+            flags,
         }))
     }
 }

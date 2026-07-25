@@ -9,7 +9,7 @@ pub enum TargetAddress {
 }
 
 impl TargetAddress {
-    fn encode(&self, buf: &mut BytesMut) {
+    pub fn encode(&self, buf: &mut BytesMut) {
         match self {
             Self::Ip(SocketAddr::V4(addr)) => {
                 buf.put_u8(0x01);
@@ -31,7 +31,7 @@ impl TargetAddress {
         }
     }
 
-    fn decode(buf: &mut impl Buf) -> Option<Self> {
+    pub fn decode(buf: &mut impl Buf) -> Option<Self> {
         if !buf.has_remaining() {
             return None;
         }
