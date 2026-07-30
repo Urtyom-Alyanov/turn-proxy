@@ -108,7 +108,7 @@
 **Описание по полям**
 1. _Sha256 Fingerprint (**32 байта**)_ - отпечаток сертификата, должен совпадать с тем, что передаётся при DTLS-рукопожатии.
 2. _Session ID (**16 bytes**)_ - ID сессии, генерируется на стороне клиента.
-3. _HMAC-Sha256 (**32 bytes**)_ - хеш состоящий из 30-секундного отрезка, Session ID и отпечатка. Формула: `HMAC(Fingerprint + SessionID + Timestamp(UTC/30)`.
+3. _HMAC-Sha256 (**32 bytes**)_ - хеш состоящий из 30-секундного отрезка, Session ID и отпечатка. Формула: `HMAC(Fingerprint + SessionID + Secret + Timestamp(UTC/30)`.
 
 При переподключении используется тот же `Session ID` и `Sha256 Fingerprint`.
 

@@ -4,7 +4,7 @@ use bytes::{Buf, BufMut, BytesMut};
 
 /// Represent a distination/source address as 0.0.0.0:0, 0::0::0::0::0::0::0::0:0, example.com:0
 ///
-/// ```
+/// ```shell
 /// +---------------+---------------------------------------+-----------+
 /// | Address Type  |               Address                 |   Port    |
 /// |   (1 byte)    |   (4 byte or 16 byte or 1 + L bytes)  | (2 bytes) |

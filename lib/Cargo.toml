@@ -8,4 +8,6 @@ authors.workspace = true
 [dependencies]
 bitflags = "2.13.1"
 bytes = "1.12.1"
+chrono = "0.4.45"
 thiserror.workspace = true
+uuid = { version = "1.24.0", features = ["v7"] }
